@@ -220,12 +220,15 @@ export default function LandingPageBuilder() {
       setHasUnpublishedChanges(true);
       setConcurrencyError(null);
       setConflictServerVersion(null);
-      showToast('Draft changes saved successfully.');
+      showToast('Draft changes saved successfully.', 'success');
     } catch (err) {
       if (err.status === 409) {
         const latestVer = err.data?.currentDraftVersion;
         setConflictServerVersion(latestVer || null);
-        setConcurrencyError(err.data?.error || err.message || 'Concurrency conflict detected: the server has a newer version of the draft.');
+        setConcurrencyError(err.data?.error || err.message || 'Concurrency conflict: the server has a newer version.');
+      } else if (!err.status) {
+        // Network / connection error
+        showToast('Connection error: Backend server may be starting up. Please wait a moment and try again.', 'error');
       } else {
         showToast(err.message || 'Failed to save draft.', 'error');
       }

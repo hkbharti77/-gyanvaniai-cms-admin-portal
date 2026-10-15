@@ -9,26 +9,11 @@ function getCookie(name) {
   return match ? decodeURIComponent(match[3]) : null;
 }
 
-export async function request(endpoint, options = {}) {
-  const url = getApiUrl(endpoint);
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-  };
-
-  // Double-submit CSRF cookie injection on mutating requests
-  const method = (options.method || 'GET').toUpperCase();
-  if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(method)) {
-    const csrfToken = memoryCsrfToken || getCookie('gyanvani_csrf_token');
-    if (csrfToken) {
-      headers['X-CSRF-Token'] = csrfToken;
-    }
-  }
-
+// Internal raw fetch — no retry, used by refreshAndGetCsrf
+async function rawRequest(url, fetchOptions) {
   const response = await fetch(url, {
-    ...options,
-    headers,
-    credentials: 'include', // Guarantees HttpOnly session cookie transmission
+    ...fetchOptions,
+    credentials: 'include',
   });
 
   const contentType = response.headers.get('content-type') || '';
@@ -49,6 +34,68 @@ export async function request(endpoint, options = {}) {
   }
 
   return data;
+}
+
+// Silently refresh CSRF token from the server and update memoryCsrfToken
+async function refreshCsrfToken() {
+  try {
+    const csrfUrl = getApiUrl('/api/admin/auth/csrf');
+    const res = await fetch(csrfUrl, { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.csrfToken) {
+        memoryCsrfToken = data.csrfToken;
+      }
+    }
+  } catch (_) {
+    // Ignore refresh errors — original error will surface
+  }
+}
+
+export async function request(endpoint, options = {}) {
+  const url = getApiUrl(endpoint);
+  const method = (options.method || 'GET').toUpperCase();
+
+  const buildHeaders = () => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    };
+    if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(method)) {
+      const csrfToken = memoryCsrfToken || getCookie('gyanvani_csrf_token');
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
+    }
+    return headers;
+  };
+
+  const fetchOptions = { ...options, headers: buildHeaders(), credentials: 'include' };
+
+  try {
+    return await rawRequest(url, fetchOptions);
+  } catch (err) {
+    // On CSRF failure or stale token (403 CSRF_INVALID), refresh token and retry once
+    const isCsrfError =
+      err.status === 403 && (err.code === 'CSRF_INVALID' || err.message?.includes('CSRF'));
+    // On connection reset / network failure, also retry once with fresh CSRF
+    const isNetworkError = !err.status && err.message && (
+      err.message.includes('Failed to fetch') ||
+      err.message.includes('NetworkError') ||
+      err.message.includes('ERR_CONNECTION_RESET')
+    );
+
+    if ((isCsrfError || isNetworkError) && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method)) {
+      console.warn('[API] Refreshing CSRF token and retrying request:', endpoint);
+      await refreshCsrfToken();
+      // Short delay to ensure backend has recovered if connection was reset
+      await new Promise((r) => setTimeout(r, 400));
+      const retryOptions = { ...options, headers: buildHeaders(), credentials: 'include' };
+      return await rawRequest(url, retryOptions);
+    }
+
+    throw err;
+  }
 }
 
 export const api = {
