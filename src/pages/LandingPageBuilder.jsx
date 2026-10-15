@@ -127,11 +127,61 @@ export default function LandingPageBuilder() {
     setMediaPickerTarget(null);
   };
 
+  // Client-side image optimizer for hero slides (Canvas WebP, max 1920x1080)
+  const compressSlideImage = (file) => {
+    return new Promise((resolve) => {
+      if (file.type === 'image/svg+xml') {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target.result;
+      };
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const MAX_WIDTH = 1920;
+          const MAX_HEIGHT = 1080;
+
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Modern WebP compression at 85% quality
+          const compressed = canvas.toDataURL('image/webp', 0.85);
+          resolve(compressed);
+        } catch {
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Direct file upload from user's computer
   const handleDirectFileUpload = async (slideIdx, field, file) => {
     if (!file) return;
-    if (file.size > 15 * 1024 * 1024) {
-      showToast('File size exceeds 15MB limit.', 'error');
+    if (file.size > 20 * 1024 * 1024) {
+      showToast('File size exceeds 20MB limit.', 'error');
       return;
     }
 
@@ -139,17 +189,20 @@ export default function LandingPageBuilder() {
     setUploadingSlideKey(key);
 
     try {
-      const reader = new FileReader();
-      const base64Promise = new Promise((resolve, reject) => {
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-      });
-      reader.readAsDataURL(file);
-      const fileData = await base64Promise;
+      let fileData = await compressSlideImage(file);
+      if (!fileData) {
+        fileData = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
 
+      const safeName = file.name.replace(/\.[^/.]+$/, '') + '.webp';
       const res = await api.uploadMedia({
         fileData,
-        originalName: file.name,
+        originalName: safeName,
         altText: sections.hero?.slides?.[slideIdx]?.altText || file.name,
       });
 
