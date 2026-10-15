@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, X, RefreshCw, AlertCircle, CheckCircle2, Loader2, Image as ImageIcon, Link as LinkIcon } from 'lucide-react';
+import { UploadCloud, Cloud, X, RefreshCw, AlertCircle, CheckCircle2, Loader2, Image as ImageIcon, Link as LinkIcon } from 'lucide-react';
 import { api } from '../../services/api';
 
 export default function FeaturedImageUpload({ value, altText = '', onChange, onAltChange }) {
