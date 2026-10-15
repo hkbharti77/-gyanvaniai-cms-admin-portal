@@ -1,4 +1,7 @@
 // API Client with automatic CSRF token injection and credentials support
+import { getApiUrl, BACKEND_URL } from '../config/apiConfig';
+
+let memoryCsrfToken = null;
 
 function getCookie(name) {
   if (typeof document === 'undefined') return null;
@@ -7,7 +10,7 @@ function getCookie(name) {
 }
 
 export async function request(endpoint, options = {}) {
-  const url = endpoint.startsWith('http') ? endpoint : endpoint;
+  const url = getApiUrl(endpoint);
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
@@ -16,7 +19,7 @@ export async function request(endpoint, options = {}) {
   // Double-submit CSRF cookie injection on mutating requests
   const method = (options.method || 'GET').toUpperCase();
   if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(method)) {
-    const csrfToken = getCookie('gyanvani_csrf_token');
+    const csrfToken = memoryCsrfToken || getCookie('gyanvani_csrf_token');
     if (csrfToken) {
       headers['X-CSRF-Token'] = csrfToken;
     }
@@ -50,7 +53,13 @@ export async function request(endpoint, options = {}) {
 
 export const api = {
   // Authentication
-  getCsrf: () => request('/api/admin/auth/csrf'),
+  getCsrf: async () => {
+    const data = await request('/api/admin/auth/csrf');
+    if (data?.csrfToken) {
+      memoryCsrfToken = data.csrfToken;
+    }
+    return data;
+  },
   login: (credentials) => request('/api/admin/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
   logout: () => request('/api/admin/auth/logout', { method: 'POST' }),
   getMe: () => request('/api/admin/auth/me'),
@@ -145,7 +154,7 @@ export const api = {
     body: JSON.stringify({ status, reason }),
   }),
   deleteSubscriber: (id) => request(`/api/admin/subscribers/${id}`, { method: 'DELETE' }),
-  getExportSubscribersUrl: (status = 'all') => `/api/admin/subscribers/export?status=${status}`,
+  getExportSubscribersUrl: (status = 'all') => getApiUrl(`/api/admin/subscribers/export?status=${status}`),
 
   // Leads & Customer Inquiries Management
   getLeads: (params = {}) => {
@@ -163,5 +172,14 @@ export const api = {
     body: JSON.stringify({ note }),
   }),
   deleteLead: (id) => request(`/api/admin/leads/${id}`, { method: 'DELETE' }),
-  getExportLeadsUrl: (status = 'all') => `/api/admin/leads/export?status=${status}`,
+  getExportLeadsUrl: (status = 'all') => getApiUrl(`/api/admin/leads/export?status=${status}`),
+
+  // Enterprise Dynamic Landing Page CMS
+  getLandingPageDraft: () => request('/api/admin/landing-page/draft'),
+  updateLandingPageDraft: (data) => request('/api/admin/landing-page/draft', { method: 'PUT', body: JSON.stringify(data) }),
+  updateDraftLandingPage: (data) => request('/api/admin/landing-page/draft', { method: 'PUT', body: JSON.stringify(data) }),
+  publishLandingPage: (data) => request('/api/admin/landing-page/publish', { method: 'POST', body: JSON.stringify(data) }),
+  getLandingPageRevisions: () => request('/api/admin/landing-page/revisions'),
+  rollbackLandingPageRevision: (version) => request(`/api/admin/landing-page/revisions/${version}/rollback`, { method: 'POST' }),
+  getLandingPagePreview: () => request('/api/admin/landing-page/preview'),
 };

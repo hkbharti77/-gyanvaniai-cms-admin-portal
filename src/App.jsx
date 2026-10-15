@@ -27,6 +27,7 @@ import CookieConsentManager from './pages/CookieConsentManager';
 import WebsiteThemeManager from './pages/WebsiteThemeManager';
 import SubscribersManager from './pages/SubscribersManager';
 import LeadsManager from './pages/LeadsManager';
+import LandingPageBuilder from './pages/LandingPageBuilder';
 
 export default function App() {
   return (
@@ -106,6 +107,14 @@ export default function App() {
             />
 
             {/* CMS Real Management Modules */}
+            <Route
+              path="landing-page"
+              element={
+                <ProtectedRoute requiredPermission="landing_page.read">
+                  <LandingPageBuilder />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="blog-manager"
               element={
