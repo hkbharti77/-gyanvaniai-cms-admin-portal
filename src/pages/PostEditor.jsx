@@ -126,8 +126,12 @@ export default function PostEditor() {
             tags: Array.isArray(p.tags) ? p.tags : [],
             status: p.status || 'draft',
             isFeatured: Boolean(p.isFeatured),
-            featuredImageUrl: p.featuredImage?.url || '/portfolio_crm.webp',
-            featuredImageAlt: p.featuredImage?.alt || '',
+            featuredImageUrl: typeof p.featuredImage === 'string'
+              ? p.featuredImage
+              : (p.featuredImage?.url || p.imageUrl || '/portfolio_crm.webp'),
+            featuredImageAlt: (typeof p.featuredImage === 'object' && p.featuredImage?.alt)
+              ? p.featuredImage.alt
+              : (p.title || ''),
             seoMetaTitle: p.seo?.metaTitle || '',
             seoMetaDescription: p.seo?.metaDescription || '',
             seoCanonicalUrl: p.seo?.canonicalUrl || '',
@@ -263,6 +267,7 @@ export default function PostEditor() {
           url: formData.featuredImageUrl,
           alt: formData.featuredImageAlt || formData.title,
         },
+        imageUrl: formData.featuredImageUrl,
         seo: {
           metaTitle: formData.seoMetaTitle || formData.title,
           metaDescription: formData.seoMetaDescription || formData.excerpt.slice(0, 160),

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, Cloud, X, RefreshCw, AlertCircle, CheckCircle2, Loader2, Image as ImageIcon, Link as LinkIcon } from 'lucide-react';
+import { UploadCloud, Cloud, X, RefreshCw, AlertCircle, CheckCircle2, Loader2, Image as ImageIcon, Link as LinkIcon, FolderOpen } from 'lucide-react';
 import { api } from '../../services/api';
 
 export default function FeaturedImageUpload({ value, altText = '', onChange, onAltChange }) {
@@ -8,6 +8,9 @@ export default function FeaturedImageUpload({ value, altText = '', onChange, onA
   const [uploadError, setUploadError] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [manualUrl, setManualUrl] = useState('');
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
+  const [mediaList, setMediaList] = useState([]);
+  const [loadingMedia, setLoadingMedia] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleDragOver = (e) => {
@@ -138,6 +141,19 @@ export default function FeaturedImageUpload({ value, altText = '', onChange, onA
     setManualUrl('');
   };
 
+  const openMediaPicker = async () => {
+    setShowMediaPicker(true);
+    setLoadingMedia(true);
+    try {
+      const res = await api.getMedia({ limit: 30 });
+      setMediaList(res.media || []);
+    } catch (err) {
+      console.error('Failed to load media items:', err);
+    } finally {
+      setLoadingMedia(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
       {/* Hidden File Input */}
@@ -248,7 +264,7 @@ export default function FeaturedImageUpload({ value, altText = '', onChange, onA
         </div>
       )}
 
-      {/* URL or Direct Path Input Toggle */}
+      {/* URL or Direct Path Input Toggle + Media Library Picker */}
       <div className="flex items-center justify-between pt-1">
         <button
           type="button"
@@ -256,7 +272,16 @@ export default function FeaturedImageUpload({ value, altText = '', onChange, onA
           className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
         >
           <LinkIcon className="w-3 h-3" />
-          <span>{showUrlInput ? 'Hide manual URL input' : 'Or specify image URL / existing path'}</span>
+          <span>{showUrlInput ? 'Hide manual URL input' : 'Specify image URL'}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={openMediaPicker}
+          className="text-[11px] font-semibold text-slate-700 hover:text-indigo-600 flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-md transition-colors"
+        >
+          <FolderOpen className="w-3.5 h-3.5 text-indigo-600" />
+          <span>Browse Media Library</span>
         </button>
       </div>
 
@@ -292,6 +317,90 @@ export default function FeaturedImageUpload({ value, altText = '', onChange, onA
           className="input-field text-xs py-1.5 w-full"
         />
       </div>
+
+      {/* Media Library Picker Modal */}
+      {showMediaPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FolderOpen className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-sm font-bold text-slate-900">Select Image from Media Library</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMediaPicker(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 overflow-y-auto flex-1">
+              {loadingMedia ? (
+                <div className="py-12 flex flex-col items-center justify-center space-y-2 text-slate-400">
+                  <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+                  <p className="text-xs">Loading media assets...</p>
+                </div>
+              ) : mediaList.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 text-xs">
+                  No images found in Media Library. Upload an image to get started.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {mediaList.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => {
+                        onChange(item.url);
+                        if (onAltChange && item.altText) {
+                          onAltChange(item.altText);
+                        }
+                        setShowMediaPicker(false);
+                      }}
+                      className="group cursor-pointer rounded-xl border border-slate-200 hover:border-indigo-500 overflow-hidden bg-slate-50 hover:shadow-md transition-all flex flex-col"
+                    >
+                      <div className="aspect-video w-full bg-slate-100 overflow-hidden flex items-center justify-center">
+                        <img
+                          src={item.url}
+                          alt={item.altText || item.originalName}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          onError={(e) => {
+                            e.target.src = '/portfolio_crm.webp';
+                          }}
+                        />
+                      </div>
+                      <div className="p-2 bg-white flex-1 flex flex-col justify-between">
+                        <p className="text-[11px] font-medium text-slate-700 truncate" title={item.originalName}>
+                          {item.originalName}
+                        </p>
+                        <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400">
+                          <span>{item.mimeType?.replace('image/', '')}</span>
+                          <span className="text-indigo-600 font-semibold group-hover:underline">Select</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+              <span>{mediaList.length} items loaded</span>
+              <button
+                type="button"
+                onClick={() => setShowMediaPicker(false)}
+                className="btn-secondary py-1 px-3 text-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
