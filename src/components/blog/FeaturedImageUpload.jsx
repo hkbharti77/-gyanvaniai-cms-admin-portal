@@ -177,7 +177,7 @@ export default function FeaturedImageUpload({ value, altText = '', onChange, onA
               <span className="text-xs font-mono text-slate-600 truncate block">{value}</span>
               {value.includes('cloudinary') ? (
                 <span className="text-[10px] text-sky-700 font-bold flex items-center gap-1">
-                  <Cloud className="w-3 h-3 text-sky-600" /> Cloudinary CDN (ivsmy3nx)
+                  <Cloud className="w-3 h-3 text-sky-600" /> Cloudinary CDN (xx9f2zvj)
                 </span>
               ) : (
                 <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">

@@ -146,7 +146,7 @@ export default function MediaLibrary() {
               </div>
               <span className="badge badge-sky text-[11px] flex items-center gap-1 font-bold">
                 <Cloud className="w-3 h-3 text-sky-600" />
-                <span>Cloudinary CDN: ivsmy3nx</span>
+                <span>Cloudinary CDN: xx9f2zvj</span>
               </span>
             </div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Media Library</h1>
