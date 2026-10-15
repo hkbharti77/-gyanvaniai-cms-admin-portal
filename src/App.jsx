@@ -25,6 +25,8 @@ import MediaLibrary from './pages/MediaLibrary';
 import BlogAnalytics from './pages/BlogAnalytics';
 import CookieConsentManager from './pages/CookieConsentManager';
 import WebsiteThemeManager from './pages/WebsiteThemeManager';
+import SubscribersManager from './pages/SubscribersManager';
+import LeadsManager from './pages/LeadsManager';
 
 export default function App() {
   return (
@@ -177,6 +179,22 @@ export default function App() {
               element={
                 <ProtectedRoute requiredPermission="settings.read">
                   <WebsiteThemeManager />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="subscribers"
+              element={
+                <ProtectedRoute requiredPermission="subscribers.read">
+                  <SubscribersManager />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="leads"
+              element={
+                <ProtectedRoute requiredPermission="leads.read">
+                  <LeadsManager />
                 </ProtectedRoute>
               }
             />

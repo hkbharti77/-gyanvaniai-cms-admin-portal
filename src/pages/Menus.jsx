@@ -27,6 +27,9 @@ import {
   BarChart3,
   TrendingUp,
   ShieldCheck,
+  Mail,
+  Inbox,
+  Palette,
 } from 'lucide-react';
 
 const AVAILABLE_ICONS = [
@@ -43,6 +46,9 @@ const AVAILABLE_ICONS = [
   'BarChart3',
   'TrendingUp',
   'ShieldCheck',
+  'Mail',
+  'Inbox',
+  'Palette',
 ];
 
 export default function Menus() {

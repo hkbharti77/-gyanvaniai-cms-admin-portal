@@ -133,4 +133,35 @@ export const api = {
   // Website Theme Management
   getThemeSettings: () => request('/api/admin/settings/theme'),
   updateThemeSettings: (data) => request('/api/admin/settings/theme', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Newsletter & Subscribers Management
+  getSubscribers: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/api/admin/subscribers?${query}`);
+  },
+  getSubscriberStats: () => request('/api/admin/subscribers/stats'),
+  updateSubscriberStatus: (id, status, reason) => request(`/api/admin/subscribers/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, reason }),
+  }),
+  deleteSubscriber: (id) => request(`/api/admin/subscribers/${id}`, { method: 'DELETE' }),
+  getExportSubscribersUrl: (status = 'all') => `/api/admin/subscribers/export?status=${status}`,
+
+  // Leads & Customer Inquiries Management
+  getLeads: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/api/admin/leads?${query}`);
+  },
+  getLeadStats: () => request('/api/admin/leads/stats'),
+  getLeadById: (id) => request(`/api/admin/leads/${id}`),
+  updateLead: (id, data) => request(`/api/admin/leads/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  }),
+  addLeadNote: (id, note) => request(`/api/admin/leads/${id}/notes`, {
+    method: 'POST',
+    body: JSON.stringify({ note }),
+  }),
+  deleteLead: (id) => request(`/api/admin/leads/${id}`, { method: 'DELETE' }),
+  getExportLeadsUrl: (status = 'all') => `/api/admin/leads/export?status=${status}`,
 };

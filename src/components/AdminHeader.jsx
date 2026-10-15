@@ -7,9 +7,10 @@ import {
   ChevronRight,
   ExternalLink,
   Shield,
+  Menu,
 } from 'lucide-react';
 
-export default function AdminHeader() {
+export default function AdminHeader({ onOpenMobile }) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -28,9 +29,19 @@ export default function AdminHeader() {
   });
 
   return (
-    <header className="h-16 border-b border-slate-200 bg-white/90 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-      {/* Breadcrumb Path */}
+    <header className="h-16 border-b border-slate-200 bg-white/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+      {/* Breadcrumb Path & Mobile Menu Toggle */}
       <div className="flex items-center gap-2 text-xs font-medium text-slate-500 overflow-hidden">
+        {onOpenMobile && (
+          <button
+            onClick={onOpenMobile}
+            className="p-1.5 -ml-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 md:hidden flex-shrink-0 transition-colors"
+            title="Open navigation menu"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
         {breadcrumbs.map((crumb, idx) => (
           <React.Fragment key={crumb.url}>
             {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />}
