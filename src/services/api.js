@@ -140,9 +140,41 @@ export const api = {
 
   // Audit Logs
   getAuditLogs: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+    );
+    const query = new URLSearchParams(cleanParams).toString();
     return request(`/api/admin/audit-logs?${query}`);
   },
+  getAuditStats: () => request('/api/admin/audit-logs/stats'),
+  downloadAuditExport: async (params = {}) => {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+    );
+    const query = new URLSearchParams(cleanParams).toString();
+    const url = getApiUrl(`/api/admin/audit-logs/export?${query}`);
+    const res = await fetch(url, { credentials: 'include' });
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || 'Failed to export audit logs');
+    }
+    const blob = await res.blob();
+    const disposition = res.headers.get('content-disposition');
+    let filename = `security-audit-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    if (disposition && disposition.includes('filename=')) {
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      if (match && match[1]) filename = match[1];
+    }
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+  },
+
 
   // Settings
   getSettings: () => request('/api/admin/settings'),
@@ -163,6 +195,7 @@ export const api = {
   rollbackRevision: (id, version) => request(`/api/admin/posts/${id}/revisions/${version}/rollback`, { method: 'POST' }),
   getPreviewToken: (id) => request(`/api/admin/posts/${id}/preview-token`),
   getPostsAnalytics: () => request('/api/admin/posts/analytics/summary'),
+  pingPostIndexNow: (id) => request(`/api/admin/posts/${id}/ping-indexnow`, { method: 'POST' }),
 
   // CMS Categories
   getCategories: () => request('/api/admin/categories'),

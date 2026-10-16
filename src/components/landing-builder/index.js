@@ -1,0 +1,14 @@
+export { default as SectionControlHeader } from './SectionControlHeader';
+export { default as SeoTab } from './SeoTab';
+export { default as HeroTab } from './HeroTab';
+export { default as TrustTab } from './TrustTab';
+export { default as FeaturesTab } from './FeaturesTab';
+export { default as ProcessTab } from './ProcessTab';
+export { default as IndustriesTab } from './IndustriesTab';
+export { default as OmnichannelTab } from './OmnichannelTab';
+export { default as SecurityTab } from './SecurityTab';
+export { default as PortfolioTab } from './PortfolioTab';
+export { default as FaqTab } from './FaqTab';
+export { default as ContactTab } from './ContactTab';
+export { default as FooterTab } from './FooterTab';
+export { default as LandingLivePreview } from './LandingLivePreview';

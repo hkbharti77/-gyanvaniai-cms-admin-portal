@@ -24,7 +24,7 @@ export default function AdminLayout() {
         } ml-0`}
       >
         <AdminHeader onOpenMobile={() => setMobileOpen(true)} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto animate-fade-in min-w-0">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto min-w-0">
           <Outlet />
         </main>
       </div>

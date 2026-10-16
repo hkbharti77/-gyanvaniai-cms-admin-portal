@@ -23,6 +23,7 @@ import PostEditor from './pages/PostEditor';
 import CategoryManager from './pages/CategoryManager';
 import MediaLibrary from './pages/MediaLibrary';
 import BlogAnalytics from './pages/BlogAnalytics';
+import BlogSeoManager from './pages/BlogSeoManager';
 import CookieConsentManager from './pages/CookieConsentManager';
 import WebsiteThemeManager from './pages/WebsiteThemeManager';
 import SubscribersManager from './pages/SubscribersManager';
@@ -167,11 +168,7 @@ export default function App() {
               path="blog/seo"
               element={
                 <ProtectedRoute requiredPermission="seo.read">
-                  <CmsModuleView
-                    moduleTitle="SEO Growth Intelligence"
-                    description="Identify keyword cannibalization and high-opportunity topics."
-                    requiredPermission="seo.read"
-                  />
+                  <BlogSeoManager />
                 </ProtectedRoute>
               }
             />
