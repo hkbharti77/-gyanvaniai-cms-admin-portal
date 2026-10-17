@@ -57,6 +57,7 @@ export default function BlogManager() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [channelFilter, setChannelFilter] = useState('all');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [page, setPage] = useState(1);
@@ -91,10 +92,15 @@ export default function BlogManager() {
         limit,
         status: statusFilter,
         category: categoryFilter,
+        channel: channelFilter,
         search: search.trim(),
         sortBy,
         sortOrder,
       };
+
+      if (channelFilter !== 'all') {
+        params.exact = 'true';
+      }
 
       const data = await api.getPosts(params);
       setPosts(data.posts || []);
@@ -111,7 +117,7 @@ export default function BlogManager() {
 
   useEffect(() => {
     loadPosts();
-  }, [page, limit, statusFilter, categoryFilter, search, sortBy, sortOrder]);
+  }, [page, limit, statusFilter, categoryFilter, channelFilter, search, sortBy, sortOrder]);
 
   useEffect(() => {
     async function loadCats() {
@@ -297,12 +303,13 @@ export default function BlogManager() {
     }
   };
 
-  const isFilterActive = search.trim() !== '' || statusFilter !== 'all' || categoryFilter !== 'all';
+  const isFilterActive = search.trim() !== '' || statusFilter !== 'all' || categoryFilter !== 'all' || channelFilter !== 'all';
 
   const resetAllFilters = () => {
     setSearch('');
     setStatusFilter('all');
     setCategoryFilter('all');
+    setChannelFilter('all');
     setSortBy('createdAt');
     setSortOrder('desc');
     setPage(1);
@@ -562,10 +569,10 @@ export default function BlogManager() {
           )}
         </div>
 
-        {/* Tier 2: Search, Category & Sorting Bar (Structured Grid/Flex) */}
+        {/* Tier 2: Search, Category, Channel & Sorting Bar (Structured Grid/Flex) */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-          {/* Search Input (Takes 6 cols) */}
-          <div className="md:col-span-6 relative">
+          {/* Search Input (Takes 4 cols) */}
+          <div className="md:col-span-4 relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -608,6 +615,25 @@ export default function BlogManager() {
                     {c.name}
                   </option>
                 ))}
+              </select>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Channel Dropdown (Takes 2 cols) */}
+          <div className="md:col-span-2">
+            <div className="relative">
+              <select
+                value={channelFilter}
+                onChange={(e) => {
+                  setChannelFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="input-field py-2 text-xs font-bold text-slate-700 w-full appearance-none pr-8 cursor-pointer"
+              >
+                <option value="all">🌐 All Channels</option>
+                <option value="portfolio">💼 Portfolio Only</option>
+                <option value="crm">⚡ CRM Only</option>
               </select>
               <ChevronRight className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none" />
             </div>
@@ -739,6 +765,7 @@ export default function BlogManager() {
                     />
                   </th>
                   <th className="min-w-[280px]">Article & Content Overview</th>
+                  <th className="min-w-[120px]">Channel</th>
                   <th className="min-w-[140px]">Category & Tags</th>
                   <th className="min-w-[110px]">Status</th>
                   <th className="min-w-[120px]">Governance & AEO</th>
@@ -836,6 +863,26 @@ export default function BlogManager() {
                             )}
                           </div>
                         </div>
+                      </td>
+
+                      {/* Channel Badge Column */}
+                      <td className="align-middle whitespace-nowrap">
+                        {post.channel === 'portfolio' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+                            <span>Portfolio</span>
+                          </span>
+                        ) : post.channel === 'crm' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-teal-50 text-teal-700 border border-teal-200 shadow-2xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
+                            <span>CRM</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                            <span>All Channels</span>
+                          </span>
+                        )}
                       </td>
 
                       {/* Category & Tags Column */}

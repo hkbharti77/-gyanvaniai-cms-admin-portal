@@ -306,6 +306,16 @@ h1, h2, h3, h4, h5, h6 {
   margin: 1.75rem 0 0.75rem;
   letter-spacing: -0.025em;
   line-height: 1.3;
+  border-left: 3px solid #ef4444;
+  padding-left: 0.5rem;
+}
+
+.rte-editor-content h1 span,
+.rte-editor-content h2 span,
+.rte-editor-content h3 span {
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
 }
 
 .rte-editor-content h2 {

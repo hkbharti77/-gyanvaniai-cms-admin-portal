@@ -27,6 +27,7 @@ import {
   Sparkles,
   X,
   ExternalLink,
+  Briefcase,
 } from 'lucide-react';
 
 const ICON_MAP = {
@@ -48,6 +49,7 @@ const ICON_MAP = {
   Inbox,
   Layers,
   Sparkles,
+  Briefcase,
 };
 
 // Canonical enterprise 6-section sidebar organization
@@ -87,6 +89,12 @@ const SECTIONS_CONFIG = [
         routeKey: '/admin/media',
         defaultLabel: 'Media Library',
         defaultIcon: 'Image',
+        permission: 'media.read',
+      },
+      {
+        routeKey: '/admin/portfolio-media',
+        defaultLabel: 'Portfolio Assets (Resume & Video)',
+        defaultIcon: 'Briefcase',
         permission: 'media.read',
       },
     ],
@@ -273,12 +281,13 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
 
         if (isDynamicLoaded) {
           const dyn = dynamicMap.get(item.routeKey);
-          if (!dyn) {
-            // Disabled or hidden in dynamic menus
-            continue;
+          if (dyn) {
+            if (dyn.enabled === false) {
+              continue;
+            }
+            if (dyn.label) label = dyn.label;
+            if (dyn.icon) iconName = dyn.icon;
           }
-          if (dyn.label) label = dyn.label;
-          if (dyn.icon) iconName = dyn.icon;
         }
 
         // Check child items if present (e.g. Create New Article under Articles Manager)

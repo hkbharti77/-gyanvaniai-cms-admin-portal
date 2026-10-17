@@ -77,6 +77,7 @@ export default function PostEditor() {
     excerpt: '',
     content: '',
     category: 'WhatsApp CRM',
+    channel: 'all',
     tags: [],
     status: 'draft',
     isFeatured: false,
@@ -123,6 +124,7 @@ export default function PostEditor() {
             excerpt: p.excerpt || '',
             content: p.content || '',
             category: p.category || (catRes.categories?.[0]?.name || 'General'),
+            channel: p.channel || 'all',
             tags: Array.isArray(p.tags) ? p.tags : [],
             status: p.status || 'draft',
             isFeatured: Boolean(p.isFeatured),
@@ -235,6 +237,46 @@ export default function PostEditor() {
   const seoTitleStatus = getLengthStatus(seoTitleLen, 40, 60);
   const seoDescStatus = getLengthStatus(seoDescLen, 120, 160);
 
+  // Normalize article HTML to ensure no accidental H1 tags or masking styles exist in body
+  const normalizeArticleContent = (rawHtml) => {
+    if (!rawHtml || typeof rawHtml !== 'string') return '';
+    if (typeof DOMParser === 'undefined') return rawHtml;
+
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(rawHtml, 'text/html');
+
+      // 1. Demote any accidental <h1> inside the article body
+      // Headings in body must be <h2> or <h3>; prose must be <p>
+      doc.querySelectorAll('h1').forEach((h1) => {
+        const text = h1.textContent.trim();
+        if (text.length > 100 || text.includes('. ') || text.includes('.\n')) {
+          const p = doc.createElement('p');
+          p.innerHTML = h1.innerHTML;
+          h1.parentNode.replaceChild(p, h1);
+        } else {
+          const h2 = doc.createElement('h2');
+          h2.innerHTML = h1.innerHTML;
+          h1.parentNode.replaceChild(h2, h1);
+        }
+      });
+
+      // 2. Strip misleading inline font-size and font-family from spans
+      doc.querySelectorAll('span[style]').forEach((span) => {
+        span.style.removeProperty('font-size');
+        span.style.removeProperty('font-family');
+        span.style.removeProperty('font-weight');
+        if (!span.getAttribute('style')) {
+          span.removeAttribute('style');
+        }
+      });
+
+      return doc.body.innerHTML;
+    } catch {
+      return rawHtml;
+    }
+  };
+
   // Save / Update Post
   const handleSave = async (targetStatus = null) => {
     if (!formData.title.trim()) {
@@ -253,13 +295,15 @@ export default function PostEditor() {
     try {
       setSaving(true);
       const postStatus = targetStatus || formData.status;
+      const cleanContent = normalizeArticleContent(formData.content.trim());
 
       const payload = {
         title: formData.title.trim(),
         slug: formData.slug.trim(),
         excerpt: formData.excerpt.trim(),
-        content: formData.content.trim(),
+        content: cleanContent,
         category: formData.category,
+        channel: formData.channel || 'all',
         tags: formData.tags,
         status: postStatus,
         isFeatured: formData.isFeatured,
@@ -858,6 +902,25 @@ export default function PostEditor() {
 
             {openSections.publishing && (
               <div className="space-y-4 pt-1 animate-fade-in">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">
+                    Distribution Channel
+                  </label>
+                  <select
+                    name="channel"
+                    value={formData.channel || 'all'}
+                    onChange={handleChange}
+                    className="input-field text-xs w-full font-bold"
+                  >
+                    <option value="all">🌐 All Channels (Portfolio + CRM)</option>
+                    <option value="portfolio">💼 Portfolio Only (My-portfillos)</option>
+                    <option value="crm">⚡ CRM Only (GyanVaniAi SaaS)</option>
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Controls which portal / client surfaces this article.
+                  </p>
+                </div>
+
                 <div>
                   <label className="text-xs font-semibold text-slate-600 block mb-1.5">
                     Publication State

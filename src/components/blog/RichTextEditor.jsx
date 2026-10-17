@@ -74,7 +74,94 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'Wr
   };
 
   const handleFormatBlock = (tag) => {
-    exec('formatBlock', tag);
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
+    document.execCommand('formatBlock', false, tag);
+
+    // Strip masking inline font styles from the formatted block
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const parentNode = selection.anchorNode?.nodeType === Node.ELEMENT_NODE
+        ? selection.anchorNode
+        : selection.anchorNode?.parentElement;
+      if (parentNode) {
+        const blockEl = parentNode.closest('h1, h2, h3, p, blockquote');
+        if (blockEl) {
+          blockEl.querySelectorAll('span[style]').forEach(s => {
+            s.style.removeProperty('font-size');
+            s.style.removeProperty('font-family');
+            s.style.removeProperty('font-weight');
+            if (!s.getAttribute('style')) s.removeAttribute('style');
+          });
+        }
+      }
+    }
+    handleInput();
+    checkActiveFormats();
+  };
+
+  const handlePaste = (e) => {
+    const clipboardData = e.clipboardData;
+    if (!clipboardData) return;
+
+    const html = clipboardData.getData('text/html');
+    if (!html) {
+      // Default plain text handling
+      return;
+    }
+
+    e.preventDefault();
+
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+
+      // 1. Demote or convert accidental <h1> tags in pasted HTML
+      // If text is long (>100 chars or sentences), convert to paragraph <p>.
+      // If it is a section title, convert to <h2>.
+      doc.querySelectorAll('h1').forEach((h1) => {
+        const text = h1.textContent.trim();
+        if (text.length > 100 || text.includes('. ') || text.includes('.\n')) {
+          const p = doc.createElement('p');
+          p.innerHTML = h1.innerHTML;
+          h1.parentNode.replaceChild(p, h1);
+        } else {
+          const h2 = doc.createElement('h2');
+          h2.innerHTML = h1.innerHTML;
+          h1.parentNode.replaceChild(h2, h1);
+        }
+      });
+
+      // 2. Strip misleading inline font-size, font-family, font-weight from spans
+      doc.querySelectorAll('span[style]').forEach((span) => {
+        span.style.removeProperty('font-size');
+        span.style.removeProperty('font-family');
+        span.style.removeProperty('font-weight');
+        if (!span.getAttribute('style')) {
+          span.removeAttribute('style');
+        }
+      });
+
+      // 3. Remove external metadata and container attributes
+      doc.querySelectorAll('*').forEach((el) => {
+        el.removeAttribute('data-start');
+        el.removeAttribute('data-end');
+        el.removeAttribute('data-section-id');
+        el.removeAttribute('dir');
+        if (el.className && typeof el.className === 'string' && el.className.includes('selectionAnchor')) {
+          el.removeAttribute('class');
+        }
+      });
+
+      const cleanHtml = doc.body.innerHTML;
+      document.execCommand('insertHTML', false, cleanHtml);
+      handleInput();
+    } catch {
+      const text = clipboardData.getData('text/plain');
+      document.execCommand('insertText', false, text);
+      handleInput();
+    }
   };
 
   const handleLink = () => {
@@ -290,6 +377,7 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'Wr
           contentEditable
           suppressContentEditableWarning
           onInput={handleInput}
+          onPaste={handlePaste}
           onKeyUp={checkActiveFormats}
           onMouseUp={checkActiveFormats}
           data-placeholder={placeholder}

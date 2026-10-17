@@ -211,6 +211,12 @@ export const api = {
   uploadMedia: (data) => request('/api/admin/media/upload', { method: 'POST', body: JSON.stringify(data) }),
   deleteMedia: (id) => request(`/api/admin/media/${id}`, { method: 'DELETE' }),
 
+  // Portfolio Assets (Resume & Intro Video)
+  getPortfolioSiteMedia: () => request('/api/admin/media/portfolio'),
+  updatePortfolioSiteMedia: (data) => request('/api/admin/media/portfolio', { method: 'PUT', body: JSON.stringify(data) }),
+  uploadPortfolioResume: (data) => request('/api/admin/media/portfolio/upload-resume', { method: 'POST', body: JSON.stringify(data) }),
+  uploadPortfolioVideo: (data) => request('/api/admin/media/portfolio/upload-video', { method: 'POST', body: JSON.stringify(data) }),
+
   // Cookie Consent Management (GDPR/DPDP/CCPA Compliance)
   getCookieConsents: (params = {}) => {
     const query = new URLSearchParams(params).toString();

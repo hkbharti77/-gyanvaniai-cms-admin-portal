@@ -29,6 +29,7 @@ import WebsiteThemeManager from './pages/WebsiteThemeManager';
 import SubscribersManager from './pages/SubscribersManager';
 import LeadsManager from './pages/LeadsManager';
 import LandingPageBuilder from './pages/LandingPageBuilder';
+import PortfolioMediaManager from './pages/PortfolioMediaManager';
 
 export default function App() {
   return (
@@ -153,6 +154,14 @@ export default function App() {
               element={
                 <ProtectedRoute requiredPermission="media.read">
                   <MediaLibrary />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="portfolio-media"
+              element={
+                <ProtectedRoute requiredPermission="media.read">
+                  <PortfolioMediaManager />
                 </ProtectedRoute>
               }
             />
