@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { api } from "../services/api";
 import {
   ShieldCheck, RefreshCw, Globe, Users, TrendingUp, Loader2,
@@ -85,6 +85,7 @@ function KpiCard({ label, value, sub, icon: Icon, color = "indigo" }) {
 }
 
 /* ── Record detail drawer ─────────────────────────────────────────────────── */
+/* ── Record detail drawer ─────────────────────────────────────────────────── */
 function RecordDrawer({ record, onClose, onDelete }) {
   if (!record) return null;
   const sc = STATUS_CONFIG[record.status] || STATUS_CONFIG.all;
@@ -100,7 +101,28 @@ function RecordDrawer({ record, onClose, onDelete }) {
 
           <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
             <span className={`badge ${sc.badge} text-xs`}>{sc.label}</span>
+            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+              record.channel === 'portfolio' 
+                ? 'bg-purple-50 text-purple-700 border-purple-200' 
+                : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+            }`}>
+              {record.channel === 'portfolio' ? '🌐 Portfolio' : '💼 CRM Platform'}
+            </span>
             <span className="text-xs text-slate-500 ml-auto">{record.createdAt ? new Date(record.createdAt).toLocaleString() : "—"}</span>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Channel & Origin Isolation</p>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Channel:</span>
+                <span className="font-semibold text-slate-800 capitalize">{record.channel || 'crm'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Source:</span>
+                <span className="font-mono text-slate-700 text-[11px]">{record.source || 'default'}</span>
+              </div>
+            </div>
           </div>
 
           <div>
@@ -167,6 +189,7 @@ export default function CookieConsentManager() {
   const [aLoading, setALoading]   = useState(true);
   const [error, setError]         = useState(null);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [channelFilter, setChannelFilter]   = useState("all");
   const [statusFilter, setStatusFilter]     = useState("all_status");
   const [search, setSearch]                 = useState("");
   const [page, setPage]                     = useState(1);
@@ -175,14 +198,19 @@ export default function CookieConsentManager() {
 
   const loadAnalytics = useCallback(async () => {
     setALoading(true);
-    try { setAnalytics(await api.getCookieAnalytics()); } catch {}
+    try {
+      const params = {};
+      if (channelFilter !== "all") params.channel = channelFilter;
+      setAnalytics(await api.getCookieAnalytics(params));
+    } catch {}
     setALoading(false);
-  }, []);
+  }, [channelFilter]);
 
   const loadRecords = useCallback(async () => {
     setLoading(true); setError(null);
     try {
       const params = { page, limit: 15 };
+      if (channelFilter !== "all") params.channel = channelFilter;
       if (statusFilter !== "all_status") params.status = statusFilter;
       if (search.trim()) params.search = search.trim();
       const res = await api.getCookieConsents(params);
@@ -194,7 +222,7 @@ export default function CookieConsentManager() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, search]);
+  }, [page, channelFilter, statusFilter, search]);
 
   useEffect(() => { loadAnalytics(); }, [loadAnalytics]);
   useEffect(() => { loadRecords(); }, [loadRecords]);
@@ -213,6 +241,7 @@ export default function CookieConsentManager() {
 
   const ov = analytics?.overview || {};
   const cats = analytics?.categoryAcceptance || {};
+  const channelBreakdown = analytics?.channelBreakdown || [];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -221,16 +250,60 @@ export default function CookieConsentManager() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100/80 border border-indigo-200 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-2">
-            <ShieldCheck className="w-3.5 h-3.5" /><span>Cookie Compliance</span>
+            <ShieldCheck className="w-3.5 h-3.5" /><span>Cookie Compliance &amp; Channel Isolation</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Cookie Consent Manager</h1>
-          <p className="text-sm text-slate-500 mt-0.5">GDPR · DPDP Act 2023 · CCPA — consent audit trail and category acceptance analytics.</p>
+          <p className="text-sm text-slate-500 mt-0.5">GDPR · DPDP Act 2023 · CCPA — consent audit trail separated by channel (Portfolio vs CRM SaaS).</p>
         </div>
         <div className="flex items-center gap-3">
           {lastRefresh && <span className="text-xs text-slate-400 hidden sm:block">Updated {lastRefresh.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}
           <button onClick={() => { loadAnalytics(); loadRecords(); }} className="btn-secondary text-xs font-semibold flex items-center gap-2">
             <RefreshCw className={`w-3.5 h-3.5 ${loading || aLoading ? "animate-spin" : ""}`} />Refresh
           </button>
+        </div>
+      </div>
+
+      {/* Channel Isolation Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-white border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider mr-1">Channel Filter:</span>
+          <div className="inline-flex p-1 bg-slate-100 rounded-lg gap-1">
+            <button
+              onClick={() => { setChannelFilter("all"); setPage(1); }}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                channelFilter === "all"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              All Channels ({ov.total || 0})
+            </button>
+            <button
+              onClick={() => { setChannelFilter("portfolio"); setPage(1); }}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                channelFilter === "portfolio"
+                  ? "bg-purple-600 text-white shadow-sm"
+                  : "text-slate-600 hover:text-purple-700"
+              }`}
+            >
+              <span>🌐</span> Portfolio Website ({channelBreakdown.find(c => c.channel === 'portfolio')?.count || 0})
+            </button>
+            <button
+              onClick={() => { setChannelFilter("crm"); setPage(1); }}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                channelFilter === "crm"
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-slate-600 hover:text-indigo-700"
+              }`}
+            >
+              <span>💼</span> CRM Platform ({channelBreakdown.find(c => c.channel === 'crm')?.count || 0})
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Real-time channel differentiation active</span>
         </div>
       </div>
 
@@ -241,12 +314,12 @@ export default function CookieConsentManager() {
         {["GDPR Art.6, 7 & 17", "India DPDP Act 2023 §6, 12", "CCPA §1798.100–120", "IAB TCF v2.2"].map(f => (
           <span key={f} className="px-2 py-0.5 rounded-full bg-white border border-indigo-200 text-indigo-700 font-semibold">{f}</span>
         ))}
-        <span className="text-slate-500 ml-auto hidden md:block">Records stored in MongoDB Atlas · Consent version 2.0</span>
+        <span className="text-slate-500 ml-auto hidden md:block">Records stored in MongoDB Atlas · Multi-channel isolation</span>
       </div>
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Total Consents" value={aLoading ? "…" : ov.total?.toLocaleString()} sub="All-time audit records" icon={ShieldCheck} color="indigo" />
+        <KpiCard label="Total Consents" value={aLoading ? "…" : ov.total?.toLocaleString()} sub={channelFilter === 'all' ? "All channels combined" : `Channel: ${channelFilter}`} icon={ShieldCheck} color="indigo" />
         <KpiCard label="Accept Rate" value={aLoading ? "…" : `${ov.acceptRate ?? 0}%`} sub={`${ov.last7 ?? 0} this week`} icon={TrendingUp} color="emerald" />
         <KpiCard label="Reject Rate" value={aLoading ? "…" : `${ov.rejectRate ?? 0}%`} sub="Reject All responses" icon={XCircle} color="rose" />
         <KpiCard label="This Month" value={aLoading ? "…" : ov.last30?.toLocaleString()} sub="30-day consent events" icon={BarChart3} color="amber" />
@@ -323,14 +396,14 @@ export default function CookieConsentManager() {
         <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center gap-3">
           <div>
             <h2 className="text-sm font-bold text-slate-900">Consent Audit Log</h2>
-            <p className="text-xs text-slate-500 mt-0.5">{pagination.total?.toLocaleString()} records · GDPR Art.17 erasure available</p>
+            <p className="text-xs text-slate-500 mt-0.5">{pagination.total?.toLocaleString()} records · Channel: <strong className="capitalize">{channelFilter}</strong></p>
           </div>
           <div className="flex items-center gap-2 ml-auto flex-wrap">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               <input
                 className="input-field pl-8 pr-3 py-2 text-xs w-44"
-                placeholder="Search country, URL…"
+                placeholder="Search channel, country, URL…"
                 value={search}
                 onChange={e => { setSearch(e.target.value); setPage(1); }}
               />
@@ -362,6 +435,7 @@ export default function CookieConsentManager() {
             <thead>
               <tr className="border-b border-slate-100 text-slate-500 uppercase tracking-wider">
                 <th className="py-3 px-4 font-semibold">Status</th>
+                <th className="py-3 px-4 font-semibold">Channel</th>
                 <th className="py-3 px-4 font-semibold hidden md:table-cell">Country</th>
                 <th className="py-3 px-4 font-semibold hidden lg:table-cell">Categories</th>
                 <th className="py-3 px-4 font-semibold hidden sm:table-cell">Page</th>
@@ -371,16 +445,26 @@ export default function CookieConsentManager() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading ? (
-                <tr><td colSpan={6} className="py-12 text-center"><Loader2 className="w-6 h-6 animate-spin text-slate-300 mx-auto" /></td></tr>
+                <tr><td colSpan={7} className="py-12 text-center"><Loader2 className="w-6 h-6 animate-spin text-slate-300 mx-auto" /></td></tr>
               ) : records.length === 0 ? (
-                <tr><td colSpan={6} className="py-12 text-center text-slate-400">No consent records found</td></tr>
+                <tr><td colSpan={7} className="py-12 text-center text-slate-400">No consent records found for this channel</td></tr>
               ) : records.map(r => {
                 const sc = STATUS_CONFIG[r.status] || STATUS_CONFIG.all;
                 const prefs = r.preferences || {};
+                const isPortfolio = r.channel === 'portfolio';
                 return (
                   <tr key={r.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="py-3 px-4">
                       <span className={`badge ${sc.badge} text-[10px]`}>{sc.label}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                        isPortfolio 
+                          ? 'bg-purple-50 text-purple-700 border-purple-200' 
+                          : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                      }`}>
+                        {isPortfolio ? '🌐 Portfolio' : '💼 CRM Platform'}
+                      </span>
                     </td>
                     <td className="py-3 px-4 hidden md:table-cell">
                       <div className="flex items-center gap-1.5">
@@ -399,7 +483,7 @@ export default function CookieConsentManager() {
                     </td>
                     <td className="py-3 px-4 hidden sm:table-cell">
                       <span className="text-slate-500 truncate max-w-[140px] block" title={r.pageUrl}>
-                        {r.pageUrl ? new URL(r.pageUrl).pathname : "—"}
+                        {r.pageUrl ? (r.pageUrl.startsWith('http') ? new URL(r.pageUrl).pathname : r.pageUrl) : "—"}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right text-slate-400 whitespace-nowrap">

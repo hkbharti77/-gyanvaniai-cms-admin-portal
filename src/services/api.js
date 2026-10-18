@@ -222,7 +222,10 @@ export const api = {
     const query = new URLSearchParams(params).toString();
     return request(`/api/admin/cookies?${query}`);
   },
-  getCookieAnalytics: () => request('/api/admin/cookies/analytics'),
+  getCookieAnalytics: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/api/admin/cookies/analytics${query ? '?' + query : ''}`);
+  },
   deleteConsentRecord: (id) => request(`/api/admin/cookies/${id}`, { method: 'DELETE' }),
 
   // Website Theme Management
