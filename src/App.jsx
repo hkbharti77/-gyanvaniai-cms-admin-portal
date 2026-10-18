@@ -30,6 +30,7 @@ import SubscribersManager from './pages/SubscribersManager';
 import LeadsManager from './pages/LeadsManager';
 import LandingPageBuilder from './pages/LandingPageBuilder';
 import PortfolioMediaManager from './pages/PortfolioMediaManager';
+import PrivacyRequestsManager from './pages/PrivacyRequestsManager';
 
 export default function App() {
   return (
@@ -186,6 +187,14 @@ export default function App() {
               element={
                 <ProtectedRoute requiredPermission="cookies.read">
                   <CookieConsentManager />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="privacy-requests"
+              element={
+                <ProtectedRoute requiredPermission="audit.read">
+                  <PrivacyRequestsManager />
                 </ProtectedRoute>
               }
             />

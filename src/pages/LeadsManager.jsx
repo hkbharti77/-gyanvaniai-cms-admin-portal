@@ -62,6 +62,7 @@ export default function LeadsManager() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedChannel, setSelectedChannel] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedPriority, setSelectedPriority] = useState('all');
   const [page, setPage] = useState(1);
@@ -81,11 +82,12 @@ export default function LeadsManager() {
 
     try {
       const [statsData, listData] = await Promise.all([
-        api.getLeadStats(),
+        api.getLeadStats({ channel: selectedChannel }),
         api.getLeads({
           page,
           limit: 20,
           search: searchTerm,
+          channel: selectedChannel,
           status: selectedStatus,
           priority: selectedPriority,
         }),
@@ -105,7 +107,7 @@ export default function LeadsManager() {
 
   useEffect(() => {
     loadData();
-  }, [page, selectedStatus, selectedPriority]);
+  }, [page, selectedChannel, selectedStatus, selectedPriority]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -189,7 +191,7 @@ export default function LeadsManager() {
   };
 
   const handleExportCsv = () => {
-    const exportUrl = api.getExportLeadsUrl(selectedStatus);
+    const exportUrl = api.getExportLeadsUrl(selectedStatus, selectedChannel);
     window.open(exportUrl, '_blank');
   };
 
@@ -326,10 +328,26 @@ export default function LeadsManager() {
           />
         </form>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          {/* Status Filter */}
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Channel Filter */}
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-slate-400" />
+            <select
+              value={selectedChannel}
+              onChange={(e) => {
+                setSelectedChannel(e.target.value);
+                setPage(1);
+              }}
+              className="text-sm font-medium border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            >
+              <option value="all">All Channels</option>
+              <option value="portfolio">💼 Portfolio Website</option>
+              <option value="crm">🏢 SaaS CRM Portal</option>
+            </select>
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex items-center gap-2">
             <select
               value={selectedStatus}
               onChange={(e) => {
@@ -367,10 +385,11 @@ export default function LeadsManager() {
             </select>
           </div>
 
-          {(searchTerm || selectedStatus !== 'all' || selectedPriority !== 'all') && (
+          {(searchTerm || selectedChannel !== 'all' || selectedStatus !== 'all' || selectedPriority !== 'all') && (
             <button
               onClick={() => {
                 setSearchTerm('');
+                setSelectedChannel('all');
                 setSelectedStatus('all');
                 setSelectedPriority('all');
                 setPage(1);
@@ -421,10 +440,21 @@ export default function LeadsManager() {
                     <tr key={lead._id} className="hover:bg-slate-50/70 transition-colors">
                       {/* Prospect */}
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-900">{lead.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-slate-900">{lead.name}</span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              lead.channel === 'portfolio'
+                                ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                                : 'bg-blue-100 text-blue-700 border border-blue-200'
+                            }`}
+                          >
+                            {lead.channel === 'portfolio' ? 'Portfolio' : 'SaaS CRM'}
+                          </span>
+                        </div>
                         <div className="text-xs text-slate-500 font-mono mt-0.5">{lead.email}</div>
                         <span className="inline-block mt-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                          {lead.source === 'website_demo_modal' ? 'Demo Modal' : 'Contact Form'}
+                          {lead.source === 'website_demo_modal' ? 'Demo Modal' : lead.source === 'portfolio_contact_form' ? 'Portfolio Form' : 'Contact Form'}
                         </span>
                       </td>
 
@@ -592,6 +622,25 @@ export default function LeadsManager() {
 
             {/* Modal Body */}
             <div className="p-6 space-y-6 flex-1">
+              {/* Channel and Source Indicator */}
+              <div className="flex items-center justify-between p-3 bg-slate-100/80 border border-slate-200 rounded-xl text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500 font-medium">Channel:</span>
+                  <span
+                    className={`font-bold px-2.5 py-0.5 rounded-full text-[11px] ${
+                      selectedLead.channel === 'portfolio'
+                        ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                        : 'bg-blue-100 text-blue-700 border border-blue-200'
+                    }`}
+                  >
+                    {selectedLead.channel === 'portfolio' ? '💼 Portfolio Website' : '🏢 SaaS CRM Portal'}
+                  </span>
+                </div>
+                <div className="text-slate-500">
+                  Source: <strong className="font-mono text-slate-700">{selectedLead.source || 'Website'}</strong>
+                </div>
+              </div>
+
               {/* Quick Contact & Status Bar */}
               <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs">
                 <div>

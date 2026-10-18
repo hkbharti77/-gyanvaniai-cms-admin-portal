@@ -247,7 +247,10 @@ export const api = {
     const query = new URLSearchParams(params).toString();
     return request(`/api/admin/leads?${query}`);
   },
-  getLeadStats: () => request('/api/admin/leads/stats'),
+  getLeadStats: (params = {}) => {
+    const query = typeof params === 'string' ? `channel=${encodeURIComponent(params)}` : new URLSearchParams(params).toString();
+    return request(`/api/admin/leads/stats${query ? '?' + query : ''}`);
+  },
   getLeadById: (id) => request(`/api/admin/leads/${id}`),
   updateLead: (id, data) => request(`/api/admin/leads/${id}`, {
     method: 'PATCH',
@@ -258,7 +261,7 @@ export const api = {
     body: JSON.stringify({ note }),
   }),
   deleteLead: (id) => request(`/api/admin/leads/${id}`, { method: 'DELETE' }),
-  getExportLeadsUrl: (status = 'all') => getApiUrl(`/api/admin/leads/export?status=${status}`),
+  getExportLeadsUrl: (status = 'all', channel = 'all') => getApiUrl(`/api/admin/leads/export?status=${status}&channel=${channel}`),
 
   // Enterprise Dynamic Landing Page CMS
   getLandingPageDraft: () => request('/api/admin/landing-page/draft'),
@@ -268,4 +271,14 @@ export const api = {
   getLandingPageRevisions: () => request('/api/admin/landing-page/revisions'),
   rollbackLandingPageRevision: (version) => request(`/api/admin/landing-page/revisions/${version}/rollback`, { method: 'POST' }),
   getLandingPagePreview: () => request('/api/admin/landing-page/preview'),
+
+  // DPDP Act 2023 / Data Subject Rights (DSR) Grievance Management
+  getPrivacyRequests: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/api/admin/privacy-requests?${query}`);
+  },
+  updatePrivacyRequest: (id, data) => request(`/api/admin/privacy-requests/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  }),
 };

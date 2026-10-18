@@ -28,6 +28,7 @@ import {
   X,
   ExternalLink,
   Briefcase,
+  ShieldAlert,
 } from 'lucide-react';
 
 const ICON_MAP = {
@@ -44,6 +45,7 @@ const ICON_MAP = {
   BarChart3,
   TrendingUp,
   ShieldCheck,
+  ShieldAlert,
   Palette,
   Mail,
   Inbox,
@@ -144,6 +146,12 @@ const SECTIONS_CONFIG = [
         defaultLabel: 'Cookie Consents',
         defaultIcon: 'ShieldCheck',
         permission: 'cookies.read',
+      },
+      {
+        routeKey: '/admin/privacy-requests',
+        defaultLabel: 'Privacy Requests (DSR)',
+        defaultIcon: 'ShieldAlert',
+        permission: 'audit.read',
       },
     ],
   },
