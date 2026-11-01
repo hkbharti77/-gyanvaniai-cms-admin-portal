@@ -24,6 +24,8 @@ import {
   PlusCircle,
   Eye,
   Check,
+  FileText,
+  Scale,
 } from 'lucide-react';
 
 const STATUS_CONFIG = {
@@ -65,6 +67,7 @@ export default function LeadsManager() {
   const [selectedChannel, setSelectedChannel] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedPriority, setSelectedPriority] = useState('all');
+  const [selectedNda, setSelectedNda] = useState('all');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1, limit: 20 });
   const [actionError, setActionError] = useState(null);
@@ -90,6 +93,7 @@ export default function LeadsManager() {
           channel: selectedChannel,
           status: selectedStatus,
           priority: selectedPriority,
+          ndaRequired: selectedNda === 'nda' ? 'true' : undefined,
         }),
       ]);
 
@@ -107,7 +111,7 @@ export default function LeadsManager() {
 
   useEffect(() => {
     loadData();
-  }, [page, selectedChannel, selectedStatus, selectedPriority]);
+  }, [page, selectedChannel, selectedStatus, selectedPriority, selectedNda]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -127,7 +131,7 @@ export default function LeadsManager() {
       setActionSuccess('Lead status updated.');
       setTimeout(() => setActionSuccess(null), 2500);
       // Reload stats silently
-      api.getLeadStats().then((s) => setStats(s || {}));
+      api.getLeadStats({ channel: selectedChannel }).then((s) => setStats(s || {}));
     } catch (err) {
       setActionError(err.message || 'Failed to update status.');
     }
@@ -385,13 +389,33 @@ export default function LeadsManager() {
             </select>
           </div>
 
-          {(searchTerm || selectedChannel !== 'all' || selectedStatus !== 'all' || selectedPriority !== 'all') && (
+          {/* NDA Agreement Filter */}
+          <div>
+            <select
+              value={selectedNda}
+              onChange={(e) => {
+                setSelectedNda(e.target.value);
+                setPage(1);
+              }}
+              className={`text-sm border rounded-lg px-3 py-2 font-medium transition-colors focus:outline-hidden focus:ring-2 ${
+                selectedNda === 'nda'
+                  ? 'bg-amber-50 text-amber-900 border-amber-300 ring-amber-500/20'
+                  : 'bg-white text-slate-700 border-slate-200 focus:ring-indigo-500/20 focus:border-indigo-500'
+              }`}
+            >
+              <option value="all">All Agreements</option>
+              <option value="nda">⚖️ NDA Required Only {stats.ndaCount ? `(${stats.ndaCount})` : ''}</option>
+            </select>
+          </div>
+
+          {(searchTerm || selectedChannel !== 'all' || selectedStatus !== 'all' || selectedPriority !== 'all' || selectedNda !== 'all') && (
             <button
               onClick={() => {
                 setSearchTerm('');
                 setSelectedChannel('all');
                 setSelectedStatus('all');
                 setSelectedPriority('all');
+                setSelectedNda('all');
                 setPage(1);
               }}
               className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold"
@@ -440,7 +464,7 @@ export default function LeadsManager() {
                     <tr key={lead._id} className="hover:bg-slate-50/70 transition-colors">
                       {/* Prospect */}
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-slate-900">{lead.name}</span>
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -451,6 +475,15 @@ export default function LeadsManager() {
                           >
                             {lead.channel === 'portfolio' ? 'Portfolio' : 'SaaS CRM'}
                           </span>
+                          {lead.ndaRequired && (
+                            <span
+                              title="Mutual Non-Disclosure Agreement (NDA) requested by prospect prior to review"
+                              className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 shrink-0 shadow-2xs"
+                            >
+                              <Scale className="w-2.5 h-2.5 text-amber-700" />
+                              NDA Required
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-slate-500 font-mono mt-0.5">{lead.email}</div>
                         <span className="inline-block mt-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
@@ -699,6 +732,24 @@ export default function LeadsManager() {
                   </select>
                 </div>
               </div>
+
+              {/* Mutual NDA Callout Card */}
+              {selectedLead.ndaRequired && (
+                <div className="p-4 bg-amber-50/90 border border-amber-200 rounded-xl text-xs space-y-1.5 text-amber-950 shadow-2xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 font-bold text-amber-900 text-sm">
+                      <Scale className="w-4 h-4 text-amber-700 shrink-0" />
+                      Mutual Non-Disclosure Agreement (NDA) Requested
+                    </div>
+                    <span className="px-2 py-0.5 bg-amber-200 border border-amber-300 text-amber-900 font-mono text-[10px] font-bold uppercase rounded">
+                      Action Required
+                    </span>
+                  </div>
+                  <p className="text-amber-800 text-xs leading-relaxed">
+                    The prospect explicitly checked the <strong>Mutual NDA option</strong> on the portfolio inquest form. They require a bilateral non-disclosure agreement to be executed before disclosing full proprietary architecture or inspecting codebase assets.
+                  </p>
+                </div>
+              )}
 
               {/* Inquiry Message */}
               <div>

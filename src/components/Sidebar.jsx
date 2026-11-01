@@ -54,7 +54,7 @@ const ICON_MAP = {
   Briefcase,
 };
 
-// Canonical enterprise 6-section sidebar organization
+// Canonical enterprise modern sidebar organization
 const SECTIONS_CONFIG = [
   {
     id: 'overview',
@@ -70,18 +70,18 @@ const SECTIONS_CONFIG = [
   },
   {
     id: 'content',
-    label: 'Content & Publishing',
+    label: 'Content',
     items: [
       {
         routeKey: '/admin/blog-manager',
-        defaultLabel: 'Articles Manager',
+        defaultLabel: 'Articles',
         defaultIcon: 'FileEdit',
         permission: 'posts.read',
         activeSubpaths: ['/admin/blog-manager', '/admin/create', '/admin/edit'],
         children: [
           {
             routeKey: '/admin/create',
-            defaultLabel: 'Create New Article',
+            defaultLabel: 'New Article',
             defaultIcon: 'PenTool',
             permission: 'posts.create',
           },
@@ -89,13 +89,13 @@ const SECTIONS_CONFIG = [
       },
       {
         routeKey: '/admin/media',
-        defaultLabel: 'Media Library',
+        defaultLabel: 'Media',
         defaultIcon: 'Image',
         permission: 'media.read',
       },
       {
         routeKey: '/admin/portfolio-media',
-        defaultLabel: 'Portfolio Assets (Resume & Video)',
+        defaultLabel: 'Portfolio Assets',
         defaultIcon: 'Briefcase',
         permission: 'media.read',
       },
@@ -103,29 +103,29 @@ const SECTIONS_CONFIG = [
   },
   {
     id: 'growth',
-    label: 'Growth & Marketing',
+    label: 'Growth',
     items: [
       {
         routeKey: '/admin/blog/analytics',
-        defaultLabel: 'Traffic Analytics',
+        defaultLabel: 'Analytics',
         defaultIcon: 'BarChart3',
         permission: 'analytics.read',
       },
       {
         routeKey: '/admin/blog/seo',
-        defaultLabel: 'SEO Intelligence',
+        defaultLabel: 'SEO',
         defaultIcon: 'TrendingUp',
         permission: 'seo.read',
       },
       {
         routeKey: '/admin/leads',
-        defaultLabel: 'Leads & Inquiries',
+        defaultLabel: 'Leads',
         defaultIcon: 'Inbox',
         permission: 'leads.read',
       },
       {
         routeKey: '/admin/subscribers',
-        defaultLabel: 'Newsletter Subscribers',
+        defaultLabel: 'Subscribers',
         defaultIcon: 'Mail',
         permission: 'subscribers.read',
       },
@@ -133,23 +133,23 @@ const SECTIONS_CONFIG = [
   },
   {
     id: 'platform',
-    label: 'Platform Management',
+    label: 'Platform',
     items: [
       {
         routeKey: '/admin/website-theme',
-        defaultLabel: 'Website Themes',
+        defaultLabel: 'Themes',
         defaultIcon: 'Palette',
         permission: 'settings.read',
       },
       {
         routeKey: '/admin/cookies',
-        defaultLabel: 'Cookie Consents',
+        defaultLabel: 'Cookie Consent',
         defaultIcon: 'ShieldCheck',
         permission: 'cookies.read',
       },
       {
         routeKey: '/admin/privacy-requests',
-        defaultLabel: 'Privacy Requests (DSR)',
+        defaultLabel: 'Privacy Requests',
         defaultIcon: 'ShieldAlert',
         permission: 'audit.read',
       },
@@ -157,35 +157,35 @@ const SECTIONS_CONFIG = [
   },
   {
     id: 'security',
-    label: 'Security & Access',
+    label: 'Security',
     items: [
       {
         routeKey: '/admin/users',
-        defaultLabel: 'Administrative Users',
+        defaultLabel: 'Users',
         defaultIcon: 'Users',
         permission: 'users.read',
       },
       {
         routeKey: '/admin/roles',
-        defaultLabel: 'Roles & Access',
+        defaultLabel: 'Roles',
         defaultIcon: 'Shield',
         permission: 'roles.read',
       },
       {
         routeKey: '/admin/permissions',
-        defaultLabel: 'Permissions Catalog',
+        defaultLabel: 'Permissions',
         defaultIcon: 'KeyRound',
         permission: 'permissions.read',
       },
       {
         routeKey: '/admin/menus',
-        defaultLabel: 'Dynamic Menus',
+        defaultLabel: 'Navigation',
         defaultIcon: 'Menu',
         permission: 'menus.read',
       },
       {
         routeKey: '/admin/audit-logs',
-        defaultLabel: 'Security Audit Logs',
+        defaultLabel: 'Audit Logs',
         defaultIcon: 'FileText',
         permission: 'audit.read',
       },
@@ -193,11 +193,11 @@ const SECTIONS_CONFIG = [
   },
   {
     id: 'system',
-    label: 'System Configuration',
+    label: 'System',
     items: [
       {
         routeKey: '/admin/settings',
-        defaultLabel: 'System Settings',
+        defaultLabel: 'Settings',
         defaultIcon: 'Settings',
         permission: 'settings.read',
       },
@@ -534,8 +534,8 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                                       if (isMobile) setMobileOpen(false);
                                     }}
                                     className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700/60 transition-colors opacity-70 group-hover:opacity-100"
-                                    title="Create New Article"
-                                    aria-label="Create New Article"
+                                    title="New Article"
+                                    aria-label="New Article"
                                   >
                                     <Plus className="w-3.5 h-3.5" />
                                   </button>

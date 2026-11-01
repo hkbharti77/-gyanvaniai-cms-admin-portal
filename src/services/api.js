@@ -227,6 +227,10 @@ export const api = {
     return request(`/api/admin/cookies/analytics${query ? '?' + query : ''}`);
   },
   deleteConsentRecord: (id) => request(`/api/admin/cookies/${id}`, { method: 'DELETE' }),
+  bulkDeleteConsentRecords: (ids) => request('/api/admin/cookies/bulk-delete', {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+  }),
 
   // Website Theme Management
   getThemeSettings: () => request('/api/admin/settings/theme'),
@@ -247,11 +251,27 @@ export const api = {
 
   // Leads & Customer Inquiries Management
   getLeads: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return request(`/api/admin/leads?${query}`);
+    const cleanParams = {};
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== null && v !== '') {
+        cleanParams[k] = v;
+      }
+    }
+    const query = new URLSearchParams(cleanParams).toString();
+    return request(`/api/admin/leads${query ? '?' + query : ''}`);
   },
   getLeadStats: (params = {}) => {
-    const query = typeof params === 'string' ? `channel=${encodeURIComponent(params)}` : new URLSearchParams(params).toString();
+    const cleanParams = {};
+    if (typeof params === 'string') {
+      if (params && params !== 'all') cleanParams.channel = params;
+    } else if (params && typeof params === 'object') {
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== null && v !== '') {
+          cleanParams[k] = v;
+        }
+      }
+    }
+    const query = new URLSearchParams(cleanParams).toString();
     return request(`/api/admin/leads/stats${query ? '?' + query : ''}`);
   },
   getLeadById: (id) => request(`/api/admin/leads/${id}`),

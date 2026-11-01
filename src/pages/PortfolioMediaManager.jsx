@@ -219,9 +219,9 @@ export default function PortfolioMediaManager() {
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <Link to="/admin/dashboard" className="hover:text-indigo-600 transition-colors">Portal</Link>
           <ChevronRight className="w-3 h-3 text-slate-300" />
-          <span className="text-slate-500 font-medium">Content & Publishing</span>
+          <span className="text-slate-500 font-medium">Content</span>
           <ChevronRight className="w-3 h-3 text-slate-300" />
-          <span className="font-semibold text-slate-900">Portfolio Assets (Resume & Video)</span>
+          <span className="font-semibold text-slate-900">Portfolio Assets</span>
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
