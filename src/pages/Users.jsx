@@ -129,11 +129,15 @@ export default function Users() {
 
   const handleOpenEdit = (user) => {
     setSelectedUser(user);
+    const initialRoleIds = (user.roleIds || user.roles || [])
+      .map((r) => (typeof r === 'string' ? r : (r.id || r._id || r.roleId)))
+      .filter(Boolean);
+
     setFormData({
-      name: user.name,
-      email: user.email,
+      name: user.name || '',
+      email: user.email || '',
       password: '',
-      roleIds: user.roles?.map((r) => r.id) || [],
+      roleIds: initialRoleIds,
       status: user.status || 'active',
     });
     setModalError('');
@@ -147,7 +151,13 @@ export default function Users() {
   };
 
   const handleCreateSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    const form = document.getElementById('create-user-form');
+    if (form && !form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
     setModalError('');
     setModalLoading(true);
 
@@ -164,14 +174,32 @@ export default function Users() {
   };
 
   const handleUpdateSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!selectedUser) return;
+
+    const form = document.getElementById('edit-user-form');
+    if (form && !form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
+    if (formData.password && formData.password.length < 8) {
+      setModalError('New password must be at least 8 characters long.');
+      return;
+    }
+
     setModalError('');
     setModalLoading(true);
 
     try {
+      const userId = selectedUser.id || selectedUser._id;
+      if (!userId) {
+        throw new Error('User identifier is missing or invalid.');
+      }
+
       const payload = {
-        name: formData.name,
+        name: (formData.name || '').trim(),
+        email: (formData.email || '').trim(),
         roleIds: formData.roleIds,
         status: formData.status,
       };
@@ -179,7 +207,7 @@ export default function Users() {
         payload.password = formData.password;
       }
 
-      await api.updateUser(selectedUser.id, payload);
+      await api.updateUser(userId, payload);
       showToast(`User '${formData.name}' updated successfully.`);
       setShowEditModal(false);
       fetchUsers();
@@ -192,10 +220,12 @@ export default function Users() {
 
   const handleDeleteConfirm = async () => {
     if (!selectedUser) return;
+    const userId = selectedUser.id || selectedUser._id;
+    if (!userId) return;
     setModalLoading(true);
 
     try {
-      await api.deleteUser(selectedUser.id);
+      await api.deleteUser(userId);
       showToast(`User '${selectedUser.name}' removed successfully.`);
       setShowDeleteModal(false);
       fetchUsers();
@@ -208,12 +238,14 @@ export default function Users() {
   };
 
   const toggleRoleSelection = (roleId) => {
+    if (!roleId) return;
+    const targetId = String(roleId);
     setFormData((prev) => {
-      const exists = prev.roleIds.includes(roleId);
+      const exists = prev.roleIds.some((id) => String(id) === targetId);
       if (exists) {
-        return { ...prev, roleIds: prev.roleIds.filter((id) => id !== roleId) };
+        return { ...prev, roleIds: prev.roleIds.filter((id) => String(id) !== targetId) };
       }
-      return { ...prev, roleIds: [...prev.roleIds, roleId] };
+      return { ...prev, roleIds: [...prev.roleIds, targetId] };
     });
   };
 
@@ -503,8 +535,13 @@ export default function Users() {
                           {hasPermission('users.update') && (
                             <button
                               onClick={() => handleOpenEdit(u)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100"
-                              title="Edit user profile & roles"
+                              disabled={isSuperAdmin && !currentUser?.isSuperAdmin}
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                              title={
+                                isSuperAdmin && !currentUser?.isSuperAdmin
+                                  ? 'Super Admin required to edit this user'
+                                  : 'Edit user profile & roles'
+                              }
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
@@ -592,8 +629,8 @@ export default function Users() {
               Cancel
             </button>
             <button
-              type="submit"
-              form="create-user-form"
+              type="button"
+              onClick={handleCreateSubmit}
               disabled={modalLoading}
               className="px-5 py-2 text-xs font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-xs hover:shadow flex items-center gap-1.5 transition-all disabled:opacity-50"
             >
@@ -761,8 +798,8 @@ export default function Users() {
               Cancel
             </button>
             <button
-              type="submit"
-              form="edit-user-form"
+              type="button"
+              onClick={handleUpdateSubmit}
               disabled={modalLoading}
               className="px-5 py-2 text-xs font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-xs hover:shadow flex items-center gap-1.5 transition-all disabled:opacity-50"
             >
@@ -795,6 +832,19 @@ export default function Users() {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              Email Address <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-slate-900"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
               Account Status
             </label>
             <select
@@ -817,7 +867,7 @@ export default function Users() {
                 type={showPassword ? 'text' : 'password'}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Leave blank to preserve existing password"
+                placeholder="Leave blank to preserve existing password (min 8 chars)"
                 className="w-full pl-9 pr-10 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-slate-900 placeholder:text-slate-400"
               />
               <button
@@ -830,7 +880,7 @@ export default function Users() {
               </button>
             </div>
             <span className="text-[11px] text-slate-400 mt-1 block">
-              Only provide a value if you wish to overwrite this user's password.
+              Only provide a value if you wish to overwrite this user's password (min 8 characters).
             </span>
           </div>
 
@@ -846,14 +896,17 @@ export default function Users() {
 
             <div className="space-y-2 max-h-48 overflow-y-auto p-2.5 rounded-xl bg-slate-50/80 border border-slate-200">
               {roles.map((r) => {
-                const isChecked = formData.roleIds.includes(r.id);
+                const roleId = r.id || r._id;
+                const isChecked = formData.roleIds.some((id) => String(id) === String(roleId));
                 const disabledSuperAdmin = r.key === 'super_admin' && !currentUser?.isSuperAdmin;
 
                 return (
                   <div
-                    key={r.id}
-                    onClick={() => {
-                      if (!disabledSuperAdmin) toggleRoleSelection(r.id);
+                    key={roleId}
+                    onClick={(e) => {
+                      if (e.target.tagName !== 'INPUT' && !disabledSuperAdmin) {
+                        toggleRoleSelection(roleId);
+                      }
                     }}
                     className={`p-3 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
                       disabledSuperAdmin
@@ -867,7 +920,9 @@ export default function Users() {
                       type="checkbox"
                       disabled={disabledSuperAdmin}
                       checked={isChecked}
-                      onChange={() => {}}
+                      onChange={() => {
+                        if (!disabledSuperAdmin) toggleRoleSelection(roleId);
+                      }}
                       className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                     <div className="flex-1 min-w-0">
@@ -890,6 +945,11 @@ export default function Users() {
                       <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
                         {r.description || 'Administrative role permissions'}
                       </p>
+                      {disabledSuperAdmin && (
+                        <span className="text-[10px] text-rose-600 font-semibold mt-1 block">
+                          Super Administrator role can only be assigned by Super Admins.
+                        </span>
+                      )}
                     </div>
                   </div>
                 );

@@ -283,6 +283,13 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({ note }),
   }),
+  replyToLead: (id, data) => request(`/api/admin/leads/${id}/reply`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  markLeadMessagesRead: (id) => request(`/api/admin/leads/${id}/read-messages`, {
+    method: 'PATCH',
+  }),
   deleteLead: (id) => request(`/api/admin/leads/${id}`, { method: 'DELETE' }),
   getExportLeadsUrl: (status = 'all', channel = 'all') => getApiUrl(`/api/admin/leads/export?status=${status}&channel=${channel}`),
 

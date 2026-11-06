@@ -26,11 +26,88 @@ import {
   Check,
   FileText,
   Scale,
+  Sparkles,
 } from 'lucide-react';
+
+const EMAIL_TEMPLATES = {
+  project_pitch: {
+    id: 'project_pitch',
+    label: '🚀 Project Pitch & Next Steps',
+    getSubject: (lead) => {
+      if (lead.channel === 'portfolio') {
+        return `Re: Technical Consultation & Project Inquiry — Himanshu Bharti [Ref: ${lead.subject || lead.company || 'Inquest'}]`;
+      }
+      return `Next Steps & Project Discussion — GyanVaniAi [Ref: ${lead.subject || lead.company || 'Inquiry'}]`;
+    },
+    getBody: (lead) => {
+      if (lead.channel === 'portfolio') {
+        return `Hi ${lead.name || 'there'},
+
+Thank you for reaching out via my portfolio website regarding your engineering and systems development requirements.
+
+I reviewed your inquiry and would be delighted to collaborate. I specialize in fullstack architectures, high-performance backends, AI agents, and production web applications.
+
+Could you share a bit more context regarding the project scope, timeline, and preferred deliverables? Or if you prefer, let me know a convenient time for a brief 15-minute call or Google Meet this week to discuss details.
+
+Looking forward to connecting!`;
+      }
+      return `Hi ${lead.name || 'there'},
+
+Thank you for reaching out to GyanVaniAi regarding your project requirements. We reviewed your inquiry and would be delighted to collaborate with you.
+
+At GyanVaniAi, we specialize in building scalable software systems, AI-powered automation, and custom cloud architectures designed for rapid growth.
+
+Could you share a bit more detail about your target timeline and desired launch date? Alternatively, let us know a convenient time for a quick 15-minute discovery call this week to talk through your requirements in detail.
+
+Looking forward to speaking with you!`;
+    },
+  },
+  requirements_discovery: {
+    id: 'requirements_discovery',
+    label: '📋 Requirements Discovery',
+    getSubject: (lead) => `Project Scope & Requirement Discovery — ${lead.company || lead.name}`,
+    getBody: (lead) =>
+`Hi ${lead.name || 'there'},
+
+Thank you for connecting with us! To help our solutions engineering team assess your architecture and prepare an accurate proposal and roadmap, could you please provide a few more details on:
+
+1. Target timeline & ideal launch milestone
+2. Key must-have features and deliverables
+3. Preferred technology stack, hosting, or existing integrations
+4. Estimated team size or budget parameters
+
+Feel free to reply directly to this email, or share your availability for a brief consultation call.`,
+  },
+  nda_bilateral: {
+    id: 'nda_bilateral',
+    label: '⚖️ Mutual NDA Protocol',
+    getSubject: (lead) => `Mutual Non-Disclosure Agreement (NDA) Execution — ${lead.company || lead.name}`,
+    getBody: (lead) =>
+`Hi ${lead.name || 'there'},
+
+Thank you for submitting your project inquest. We noted your request for a Mutual Non-Disclosure Agreement (NDA) prior to disclosing confidential technical architecture and codebase specifications.
+
+We take intellectual property and confidentiality with utmost priority. We are ready to execute our standard bilateral mutual NDA, or alternatively review your organization's standard draft.
+
+Please reply with your preferred corporate details or counter-signatory info so we can execute the agreement and transition immediately into deep-dive technical discovery.`,
+  },
+  custom: {
+    id: 'custom',
+    label: '✍️ Custom Reply',
+    getSubject: (lead) => `Re: ${lead.subject || (lead.channel === 'portfolio' ? 'Technical Inquest via hkbharti77.website' : 'Inquiry regarding GyanVaniAi')}`,
+    getBody: (lead) =>
+`Hi ${lead.name || 'there'},
+
+Thank you for contacting us regarding your inquiry.
+
+`,
+  },
+};
 
 const STATUS_CONFIG = {
   new: { label: 'New', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
   contacted: { label: 'Contacted', bg: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
+  client_replied: { label: '💬 Client Replied', bg: 'bg-teal-50 text-teal-800 border-teal-300 font-bold', dot: 'bg-teal-500' },
   in_progress: { label: 'In Progress', bg: 'bg-indigo-50 text-indigo-700 border-indigo-200', dot: 'bg-indigo-500' },
   qualified: { label: 'Qualified', bg: 'bg-purple-50 text-purple-700 border-purple-200', dot: 'bg-purple-500' },
   converted: { label: 'Converted', bg: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
@@ -44,6 +121,56 @@ const PRIORITY_CONFIG = {
   medium: { label: 'Medium', bg: 'bg-indigo-100 text-indigo-800' },
   low: { label: 'Low', bg: 'bg-slate-100 text-slate-700' },
 };
+
+/**
+ * Strips raw RFC 822 MIME headers, ARC-Seal/DKIM base64 lines, and trailing quoted history
+ * so that only the human-written client message is displayed.
+ */
+function formatCleanDisplayMessage(rawText) {
+  if (!rawText) return '(Empty message)';
+  let text = String(rawText);
+
+  // If raw email headers are at the beginning, strip everything before the actual message body
+  if (text.includes('Received:') || text.includes('ARC-Seal:') || text.includes('DKIM-Signature:') || text.includes('Content-Type:')) {
+    const lines = text.split('\n');
+    const cleanLines = [];
+    let inHeader = true;
+
+    for (const l of lines) {
+      const trimmed = l.trim();
+      const isHeaderLine = /^(?:Received|ARC-[A-Za-z]+|DKIM-[A-Za-z]+|Authentication-Results|X-[A-Za-z-]+|Content-[A-Za-z-]+|MIME-Version|Return-Path|Delivered-To|Message-ID|In-Reply-To|References|From|To|Subject|Date):/i.test(trimmed);
+      const isBlob = /^[A-Za-z0-9+/=]{40,}$/.test(trimmed) || /^(?:b|s|bh)=[A-Za-z0-9+/=;]+$/i.test(trimmed);
+      const isBoundary = /^--+[A-Za-z0-9_-]+(?:--)?$/.test(trimmed);
+
+      if (inHeader) {
+        if (isHeaderLine || isBlob || isBoundary || trimmed.startsWith('for <') || trimmed.startsWith('by ') || trimmed === '') {
+          continue;
+        }
+        inHeader = false;
+        cleanLines.push(l);
+      } else {
+        if (!isBoundary && !isBlob && !isHeaderLine) {
+          cleanLines.push(l);
+        }
+      }
+    }
+    text = cleanLines.join('\n');
+  }
+
+  // Strip trailing quote markers (e.g. "On ... wrote:")
+  const wroteIdx = text.search(/\n(?:On\s+.+wrote:|\s*-+\s*Original Message\s*-+)/i);
+  if (wroteIdx !== -1) {
+    text = text.substring(0, wroteIdx);
+  }
+
+  // Strip lines starting with >
+  text = text.split('\n').filter((l) => !/^\s*>+/.test(l)).join('\n');
+
+  // Strip any accidental raw HTML tags
+  text = text.replace(/<[^>]+>/g, '');
+
+  return text.trim() || '(No plain text message content)';
+}
 
 export default function LeadsManager() {
   const [leads, setLeads] = useState([]);
@@ -77,6 +204,17 @@ export default function LeadsManager() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [newNoteText, setNewNoteText] = useState('');
   const [addingNote, setAddingNote] = useState(false);
+  const [quickReplyText, setQuickReplyText] = useState('');
+  const [quickReplySending, setQuickReplySending] = useState(false);
+
+  // Email Reply Modal State
+  const [replyModalOpen, setReplyModalOpen] = useState(false);
+  const [replyLead, setReplyLead] = useState(null);
+  const [replySubject, setReplySubject] = useState('');
+  const [replyMessage, setReplyMessage] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
+  const [replyStatus, setReplyStatus] = useState('contacted');
+  const [replyTemplate, setReplyTemplate] = useState('project_pitch');
 
   // Load leads and stats
   const loadData = async (isSilent = false) => {
@@ -191,6 +329,114 @@ export default function LeadsManager() {
       setActionError(err.message || 'Failed to add note.');
     } finally {
       setAddingNote(false);
+    }
+  };
+
+  const handleOpenLeadDrawer = async (lead) => {
+    setSelectedLead(lead);
+    setQuickReplyText('');
+    if (lead.unreadClientReplies > 0) {
+      try {
+        await api.markLeadMessagesRead(lead._id);
+        setLeads((prev) =>
+          prev.map((l) => (l._id === lead._id ? { ...l, unreadClientReplies: 0 } : l))
+        );
+        setSelectedLead((prev) => (prev ? { ...prev, unreadClientReplies: 0 } : null));
+      } catch (err) {
+        console.warn('Failed to mark lead messages read:', err);
+      }
+    }
+  };
+
+  const handleSendQuickReply = async (e) => {
+    e.preventDefault();
+    if (!quickReplyText.trim() || !selectedLead) return;
+
+    setQuickReplySending(true);
+    setActionError(null);
+    try {
+      const subject = `Re: ${selectedLead.subject || (selectedLead.channel === 'portfolio' ? 'Technical Consultation & Architecture' : 'GyanVaniAi Solutions Discussion')}`;
+      const res = await api.replyToLead(selectedLead._id, {
+        subject,
+        message: quickReplyText.trim(),
+        newStatus: 'contacted',
+      });
+
+      if (res.lead) {
+        setSelectedLead(res.lead);
+        setLeads((prev) => prev.map((l) => (l._id === res.lead._id ? res.lead : l)));
+      }
+      setQuickReplyText('');
+      setActionSuccess(`Reply dispatched to ${selectedLead.name} (${selectedLead.email}).`);
+      setTimeout(() => setActionSuccess(null), 3000);
+      loadData(true);
+    } catch (err) {
+      setActionError(err.message || 'Failed to send reply.');
+    } finally {
+      setQuickReplySending(false);
+    }
+  };
+
+  const openReplyModal = (lead, defaultTemplate = 'project_pitch') => {
+    setReplyLead(lead);
+    const tmpl = lead.ndaRequired ? 'nda_bilateral' : defaultTemplate;
+    setReplyTemplate(tmpl);
+    const chosen = EMAIL_TEMPLATES[tmpl] || EMAIL_TEMPLATES.project_pitch;
+    setReplySubject(chosen.getSubject(lead));
+    setReplyMessage(chosen.getBody(lead));
+    setReplyStatus(lead.status === 'new' ? 'contacted' : lead.status);
+    setReplyModalOpen(true);
+  };
+
+  const handleTemplateChange = (templateId) => {
+    setReplyTemplate(templateId);
+    const chosen = EMAIL_TEMPLATES[templateId];
+    if (chosen && replyLead) {
+      setReplySubject(chosen.getSubject(replyLead));
+      setReplyMessage(chosen.getBody(replyLead));
+    }
+  };
+
+  const handleSendEmailReply = async (e) => {
+    e.preventDefault();
+    if (!replyLead || !replySubject.trim() || !replyMessage.trim()) return;
+
+    setSendingReply(true);
+    setActionError(null);
+    setActionSuccess(null);
+
+    try {
+      const res = await api.replyToLead(replyLead._id, {
+        subject: replySubject.trim(),
+        message: replyMessage.trim(),
+        newStatus: replyStatus,
+      });
+
+      if (res.success) {
+        setActionSuccess(`Email successfully sent to ${replyLead.name} (${replyLead.email})!`);
+        setTimeout(() => setActionSuccess(null), 4000);
+
+        // Update lead in local state
+        setLeads((prev) =>
+          prev.map((l) => (l._id === replyLead._id ? res.lead : l))
+        );
+
+        // If drawer is currently open for this lead, update it
+        if (selectedLead && selectedLead._id === replyLead._id) {
+          setSelectedLead(res.lead);
+        }
+
+        setReplyModalOpen(false);
+        setReplyLead(null);
+        // Silently reload stats
+        api.getLeadStats({ channel: selectedChannel }).then((s) => setStats(s || {}));
+      } else {
+        setActionError(res.error || 'Failed to send email.');
+      }
+    } catch (err) {
+      setActionError(err.message || 'Failed to dispatch email.');
+    } finally {
+      setSendingReply(false);
     }
   };
 
@@ -362,6 +608,7 @@ export default function LeadsManager() {
             >
               <option value="all">All Statuses</option>
               <option value="new">New</option>
+              <option value="client_replied">💬 Client Replied</option>
               <option value="contacted">Contacted</option>
               <option value="in_progress">In Progress</option>
               <option value="qualified">Qualified</option>
@@ -466,6 +713,14 @@ export default function LeadsManager() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-slate-900">{lead.name}</span>
+                          {lead.unreadClientReplies > 0 && (
+                            <span
+                              title={`${lead.unreadClientReplies} unread client reply`}
+                              className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-600 text-white animate-pulse shadow-xs"
+                            >
+                              💬 {lead.unreadClientReplies} New Reply
+                            </span>
+                          )}
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               lead.channel === 'portfolio'
@@ -517,9 +772,9 @@ export default function LeadsManager() {
                       {/* Message Preview */}
                       <td className="px-6 py-4">
                         <div
-                          onClick={() => setSelectedLead(lead)}
+                          onClick={() => handleOpenLeadDrawer(lead)}
                           className="text-xs text-slate-700 max-w-xs truncate cursor-pointer hover:text-indigo-600"
-                          title="Click to view full message"
+                          title="Click to view full message & conversation stream"
                         >
                           {lead.message}
                         </div>
@@ -552,6 +807,7 @@ export default function LeadsManager() {
                           className={`text-xs font-semibold px-2.5 py-1 rounded-full border cursor-pointer ${statusInfo.bg}`}
                         >
                           <option value="new">New</option>
+                          <option value="client_replied">💬 Client Replied</option>
                           <option value="contacted">Contacted</option>
                           <option value="in_progress">In Progress</option>
                           <option value="qualified">Qualified</option>
@@ -581,9 +837,16 @@ export default function LeadsManager() {
                       <td className="px-6 py-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
-                            onClick={() => setSelectedLead(lead)}
+                            onClick={() => openReplyModal(lead)}
+                            className="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Reply to Lead via Email"
+                          >
+                            <Send className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleOpenLeadDrawer(lead)}
                             className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors"
-                            title="View Lead Details & Notes"
+                            title="View Lead Details & Conversation Stream"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
@@ -645,6 +908,8 @@ export default function LeadsManager() {
                   <p className="text-xs text-slate-500">{selectedLead.company || 'Individual Prospect'}</p>
                 </div>
               </div>
+
+
               <button
                 onClick={() => setSelectedLead(null)}
                 className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/60"
@@ -674,6 +939,8 @@ export default function LeadsManager() {
                 </div>
               </div>
 
+
+
               {/* Quick Contact & Status Bar */}
               <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs">
                 <div>
@@ -699,6 +966,18 @@ export default function LeadsManager() {
                 </div>
               </div>
 
+              {/* Quick Action: Direct Email Reply */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => openReplyModal(selectedLead)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer"
+                >
+                  <Send className="w-4 h-4" />
+                  Reply to Client via Email (Project Discussion &amp; Requirements)
+                </button>
+              </div>
+
               {/* Status and Priority Changers */}
               <div className="flex items-center gap-4">
                 <div className="flex-1">
@@ -709,6 +988,7 @@ export default function LeadsManager() {
                     className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white"
                   >
                     <option value="new">New</option>
+                    <option value="client_replied">💬 Client Replied</option>
                     <option value="contacted">Contacted</option>
                     <option value="in_progress">In Progress</option>
                     <option value="qualified">Qualified</option>
@@ -751,15 +1031,122 @@ export default function LeadsManager() {
                 </div>
               )}
 
-              {/* Inquiry Message */}
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-2">
-                  Inquiry Message:
-                </label>
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 leading-relaxed whitespace-pre-wrap font-sans">
-                  {selectedLead.message}
+              {/* Two-Way Email Conversation Stream */}
+              <div className="space-y-3 pt-3 border-t border-slate-200">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <Mail className="w-4 h-4 text-indigo-600" />
+                    Two-Way Email Conversation Stream
+                  </h4>
+                  <div className="flex items-center gap-1.5">
+                    {selectedLead.unreadClientReplies > 0 && (
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full animate-pulse border border-emerald-300">
+                        {selectedLead.unreadClientReplies} New Reply
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => openReplyModal(selectedLead)}
+                      className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3 text-indigo-500" />
+                      Use Templates
+                    </button>
+                  </div>
                 </div>
+
+                {/* Messages Stream Container */}
+                <div className="space-y-3 max-h-80 overflow-y-auto p-2 bg-slate-50/70 border border-slate-200 rounded-xl">
+                  {/* Origin 1: Initial Inbound Inquiry from Prospect */}
+                  <div className="p-3.5 bg-white border border-emerald-200 rounded-xl text-xs space-y-1.5 shadow-2xs">
+                    <div className="flex items-center justify-between text-slate-500 border-b border-emerald-100 pb-1.5">
+                      <span className="font-bold text-emerald-800 flex items-center gap-1.5">
+                        <User className="w-3.5 h-3.5 text-emerald-600" />
+                        {selectedLead.name} (Initial Inquiry)
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        {new Date(selectedLead.createdAt).toLocaleDateString()} {new Date(selectedLead.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-slate-800 leading-relaxed whitespace-pre-wrap font-sans">
+                      {selectedLead.message}
+                    </p>
+                  </div>
+
+                  {/* Message History (Outbound & Inbound) */}
+                  {(selectedLead.messages || []).map((msg, idx) => {
+                    const isInbound = msg.direction === 'inbound';
+                    const cleanMessage = formatCleanDisplayMessage(msg.bodyText);
+                    return (
+                      <div
+                        key={msg._id || idx}
+                        className={`p-4 rounded-xl text-xs space-y-2 shadow-xs transition-all ${
+                          isInbound
+                            ? 'bg-emerald-50/80 border border-emerald-300/80 text-slate-900 ml-0 mr-3'
+                            : 'bg-indigo-50/80 border border-indigo-200/80 text-slate-900 ml-3 mr-0'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between border-b pb-2 border-slate-200/70">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                                isInbound
+                                  ? 'bg-emerald-200/70 text-emerald-900 border border-emerald-300'
+                                  : 'bg-indigo-200/70 text-indigo-900 border border-indigo-300'
+                              }`}
+                            >
+                              {isInbound ? <User className="w-3 h-3 text-emerald-800" /> : <Send className="w-3 h-3 text-indigo-800" />}
+                              {isInbound ? 'Client Reply' : 'Outreach Reply'}
+                            </span>
+                            <span className="font-semibold text-slate-800 text-xs">
+                              {isInbound ? (msg.fromName || selectedLead.name) : (msg.authorName || 'Administrator')}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-mono">
+                            {new Date(msg.createdAt).toLocaleDateString()} {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        {msg.subject && (
+                          <div className="font-semibold text-slate-700 text-[11px] bg-white/60 px-2 py-1 rounded border border-slate-200/50">
+                            Subject: {msg.subject}
+                          </div>
+                        )}
+                        <div className="text-slate-800 leading-relaxed whitespace-pre-wrap font-sans text-xs sm:text-sm pt-0.5">
+                          {cleanMessage}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Inline Quick Reply Composer */}
+                <form onSubmit={handleSendQuickReply} className="space-y-2 pt-1">
+                  <div className="relative">
+                    <textarea
+                      rows={3}
+                      value={quickReplyText}
+                      onChange={(e) => setQuickReplyText(e.target.value)}
+                      placeholder={`Type your next email reply to ${selectedLead.name}...`}
+                      className="w-full text-xs border border-slate-300 rounded-xl p-3 bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-slate-400">
+                      Dispatched to <strong>{selectedLead.email}</strong>
+                    </span>
+                    <button
+                      type="submit"
+                      disabled={quickReplySending || !quickReplyText.trim()}
+                      className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-lg text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      {quickReplySending ? 'Sending...' : 'Send Direct Reply'}
+                    </button>
+                  </div>
+                </form>
               </div>
+
+
 
               {/* DPDP Consent & Audit Record */}
               <div className="p-4 bg-emerald-50/50 border border-emerald-200 rounded-xl text-xs space-y-1.5">
@@ -778,6 +1165,8 @@ export default function LeadsManager() {
                 </div>
               </div>
 
+
+
               {/* Internal Staff Notes & Timeline */}
               <div className="space-y-3 pt-2 border-t border-slate-200">
                 <div className="flex items-center justify-between">
@@ -793,15 +1182,45 @@ export default function LeadsManager() {
                   {(selectedLead.notes || []).length === 0 ? (
                     <p className="text-xs text-slate-400 italic">No notes added yet. Add a note below.</p>
                   ) : (
-                    selectedLead.notes.map((n, i) => (
-                      <div key={i} className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1">
-                        <div className="flex items-center justify-between text-slate-500">
-                          <span className="font-semibold text-slate-700">{n.authorName}</span>
-                          <span>{new Date(n.createdAt).toLocaleDateString()}</span>
+                    selectedLead.notes.map((n, i) => {
+                      const isEmail = n.type === 'email_outreach';
+                      return (
+                        <div
+                          key={i}
+                          className={`p-3 rounded-lg text-xs space-y-1.5 ${
+                            isEmail
+                              ? 'bg-indigo-50/70 border border-indigo-200 text-indigo-950 shadow-2xs'
+                              : 'bg-slate-50 border border-slate-200 text-slate-800'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-slate-500">
+                            <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                              {isEmail ? <Mail className="w-3.5 h-3.5 text-indigo-600" /> : null}
+                              {n.authorName}
+                              {isEmail && (
+                                <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded">
+                                  Outreach Email
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-[11px] text-slate-400">
+                              {new Date(n.createdAt).toLocaleDateString()} {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="font-medium text-slate-800">{n.note}</p>
+                          {n.emailMessage && (
+                            <details className="mt-1 cursor-pointer">
+                              <summary className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 select-none">
+                                View Sent Email Body
+                              </summary>
+                              <div className="mt-1.5 p-2.5 bg-white/80 border border-indigo-100 rounded text-[11px] leading-relaxed whitespace-pre-wrap text-slate-700 font-sans">
+                                {formatCleanDisplayMessage(n.emailMessage)}
+                              </div>
+                            </details>
+                          )}
                         </div>
-                        <p className="text-slate-800">{n.note}</p>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
 
@@ -841,6 +1260,163 @@ export default function LeadsManager() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email Reply Outreach Modal */}
+      {replyModalOpen && replyLead && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+                    Reply to Lead / Outreach Email
+                    <span
+                      className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                        replyLead.channel === 'portfolio'
+                          ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                          : 'bg-blue-100 text-blue-700 border border-blue-200'
+                      }`}
+                    >
+                      {replyLead.channel === 'portfolio' ? '💼 Portfolio' : '🏢 SaaS CRM'}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    To: <strong className="text-slate-800">{replyLead.name}</strong> &lt;{replyLead.email}&gt;
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReplyModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/60"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSendEmailReply} className="flex-1 flex flex-col overflow-hidden">
+              <div className="p-6 space-y-5 overflow-y-auto flex-1">
+                
+                {/* Client's Original Inquiry Message Snippet */}
+                <details className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs">
+                  <summary className="font-semibold text-slate-700 cursor-pointer select-none flex items-center justify-between">
+                    <span>Prospect's Original Inquiry ({new Date(replyLead.createdAt).toLocaleDateString()}):</span>
+                    <span className="text-[11px] text-indigo-600 font-normal">Click to view</span>
+                  </summary>
+                  <p className="mt-2 text-slate-600 italic whitespace-pre-wrap leading-relaxed border-t border-slate-200 pt-2">
+                    "{replyLead.message}"
+                  </p>
+                </details>
+
+                {/* Quick Template Preset Buttons */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5 mb-2">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    Quick Response Templates:
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {Object.values(EMAIL_TEMPLATES).map((tmpl) => (
+                      <button
+                        key={tmpl.id}
+                        type="button"
+                        onClick={() => handleTemplateChange(tmpl.id)}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-medium text-left transition-all border cursor-pointer ${
+                          replyTemplate === tmpl.id
+                            ? 'bg-indigo-50 border-indigo-300 text-indigo-700 font-semibold shadow-2xs'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        {tmpl.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Subject Field */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Email Subject <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={replySubject}
+                    onChange={(e) => setReplySubject(e.target.value)}
+                    placeholder="Enter email subject line..."
+                    className="w-full text-xs font-medium border border-slate-200 rounded-lg px-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
+
+                {/* Message Body Field */}
+                <div className="flex-1 flex flex-col">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700">
+                      Email Message Body <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[11px] text-slate-400">
+                      Sent via AWS SES SMTP • Client can reply directly
+                    </span>
+                  </div>
+                  <textarea
+                    required
+                    rows={8}
+                    value={replyMessage}
+                    onChange={(e) => setReplyMessage(e.target.value)}
+                    placeholder="Type your message to explain about the project, architecture, timeline, and discuss requirements..."
+                    className="w-full text-xs border border-slate-200 rounded-lg p-3 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 font-sans leading-relaxed resize-y"
+                  />
+                </div>
+
+                {/* Update Lead Status Selector */}
+                <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                  <div>
+                    <span className="font-semibold text-slate-800 block">Lead Pipeline Status:</span>
+                    <span className="text-slate-500 text-[11px]">Automatically updates pipeline when email is sent.</span>
+                  </div>
+                  <select
+                    value={replyStatus}
+                    onChange={(e) => setReplyStatus(e.target.value)}
+                    className="text-xs font-semibold border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 shadow-2xs"
+                  >
+                    <option value="contacted">Contacted (Recommended)</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="qualified">Qualified</option>
+                    <option value="converted">Converted</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+                <button
+                  type="button"
+                  disabled={sendingReply}
+                  onClick={() => setReplyModalOpen(false)}
+                  className="px-4 py-2 border border-slate-200 bg-white text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-100 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendingReply || !replySubject.trim() || !replyMessage.trim()}
+                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-lg text-xs font-bold shadow-sm hover:shadow flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {sendingReply ? 'Sending Email...' : `Send Email to ${replyLead.name}`}
+                </button>
+              </div>
+            </form>
+
           </div>
         </div>
       )}
