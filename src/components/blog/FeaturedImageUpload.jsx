@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, Cloud, X, RefreshCw, AlertCircle, CheckCircle2, Loader2, Image as ImageIcon, Link as LinkIcon, FolderOpen } from 'lucide-react';
 import { api } from '../../services/api';
+import { API_BASE_URL } from '../../config/apiConfig';
 
 export default function FeaturedImageUpload({ value, altText = '', onChange, onAltChange }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -179,11 +180,13 @@ export default function FeaturedImageUpload({ value, altText = '', onChange, onA
         <div className="relative rounded-xl border border-slate-200 overflow-hidden bg-slate-50 group">
           <div className="aspect-video w-full overflow-hidden bg-slate-100 flex items-center justify-center">
             <img
-              src={value}
+              src={value?.startsWith('/uploads/') ? `${API_BASE_URL}${value}` : value}
               alt={altText || 'Featured preview'}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
               onError={(e) => {
-                e.target.src = '/portfolio_crm.webp';
+                if (!e.target.src.endsWith('/portfolio_crm.webp')) {
+                  e.target.src = '/portfolio_crm.webp';
+                }
               }}
             />
           </div>

@@ -196,6 +196,7 @@ export const api = {
   getPreviewToken: (id) => request(`/api/admin/posts/${id}/preview-token`),
   getPostsAnalytics: () => request('/api/admin/posts/analytics/summary'),
   pingPostIndexNow: (id) => request(`/api/admin/posts/${id}/ping-indexnow`, { method: 'POST' }),
+  parseLinkedInProfile: (url) => request('/api/admin/posts/parse-linkedin', { method: 'POST', body: JSON.stringify({ url }) }),
 
   // CMS Categories
   getCategories: () => request('/api/admin/categories'),

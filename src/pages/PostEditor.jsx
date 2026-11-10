@@ -30,7 +30,21 @@ import {
   ChevronRight,
   BookOpen,
   Send,
+  User,
 } from 'lucide-react';
+
+const LinkedInIcon = ({ className = 'w-4 h-4', size = 16 }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    width={size}
+    height={size}
+    className={className}
+    style={{ color: '#0077b5' }}
+  >
+    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+  </svg>
+);
 
 import RichTextEditor from '../components/blog/RichTextEditor';
 import FeaturedImageUpload from '../components/blog/FeaturedImageUpload';
@@ -54,9 +68,12 @@ export default function PostEditor() {
   const [showRevisions, setShowRevisions] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [copiedSlug, setCopiedSlug] = useState(false);
+  const [fetchingLinkedIn, setFetchingLinkedIn] = useState(false);
+  const [linkedInInputUrl, setLinkedInInputUrl] = useState('');
 
   // Accordion sections
   const [openSections, setOpenSections] = useState({
+    author: true,
     seo: true,
     aeo: true,
     publishing: true,
@@ -77,8 +94,15 @@ export default function PostEditor() {
     excerpt: '',
     content: '',
     category: 'WhatsApp CRM',
-    channel: 'all',
+    channel: 'crm',
     tags: [],
+    author: {
+      name: '',
+      role: 'SOFTWARE ENGINEER',
+      bio: '',
+      avatar: '',
+      linkedin: '',
+    },
     status: 'draft',
     isFeatured: false,
     featuredImageUrl: '/portfolio_crm.webp',
@@ -118,14 +142,33 @@ export default function PostEditor() {
         if (isEditMode) {
           const postRes = await api.getPostById(id);
           const p = postRes.post;
+          const authorData = (typeof p.author === 'object' && p.author !== null)
+            ? p.author
+            : {
+                name: typeof p.author === 'string' ? p.author : '',
+                role: p.authorRole || 'SOFTWARE ENGINEER',
+                bio: p.authorBio || '',
+                avatar: p.authorAvatar || p.authorImage || '',
+                linkedin: p.authorLinkedin || '',
+              };
+          if (authorData.linkedin) {
+            setLinkedInInputUrl(authorData.linkedin);
+          }
           setFormData({
             title: p.title || '',
             slug: p.slug || '',
             excerpt: p.excerpt || '',
             content: p.content || '',
             category: p.category || (catRes.categories?.[0]?.name || 'General'),
-            channel: p.channel || 'all',
+            channel: (p.channel === 'portfolio' || p.channel === 'crm') ? p.channel : 'crm',
             tags: Array.isArray(p.tags) ? p.tags : [],
+            author: {
+              name: authorData.name || '',
+              role: authorData.role || 'SOFTWARE ENGINEER',
+              bio: authorData.bio || '',
+              avatar: authorData.avatar || '',
+              linkedin: authorData.linkedin || '',
+            },
             status: p.status || 'draft',
             isFeatured: Boolean(p.isFeatured),
             featuredImageUrl: typeof p.featuredImage === 'string'
@@ -180,6 +223,39 @@ export default function PostEditor() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
+  };
+
+  // Fetch / Auto-populate author data from LinkedIn profile URL
+  const handleFetchLinkedIn = async () => {
+    const targetUrl = linkedInInputUrl.trim() || formData.author.linkedin.trim();
+    if (!targetUrl) {
+      showToast('Please enter a LinkedIn profile URL (e.g., https://www.linkedin.com/in/username)', 'error');
+      return;
+    }
+
+    try {
+      setFetchingLinkedIn(true);
+      const res = await api.parseLinkedInProfile(targetUrl);
+      if (res?.author) {
+        setFormData((prev) => ({
+          ...prev,
+          author: {
+            ...prev.author,
+            name: res.author.name || prev.author.name,
+            role: res.author.role || prev.author.role || 'SOFTWARE ENGINEER',
+            bio: res.author.bio || prev.author.bio,
+            avatar: res.author.avatar || prev.author.avatar,
+            linkedin: res.author.linkedin || targetUrl,
+          },
+        }));
+        setLinkedInInputUrl(res.author.linkedin || targetUrl);
+        showToast(`Loaded author profile for "${res.author.name}".`);
+      }
+    } catch (err) {
+      showToast(err.message || 'Could not auto-fetch LinkedIn profile. You can enter details manually.', 'error');
+    } finally {
+      setFetchingLinkedIn(false);
+    }
   };
 
   // Direct Content Update
@@ -303,8 +379,9 @@ export default function PostEditor() {
         excerpt: formData.excerpt.trim(),
         content: cleanContent,
         category: formData.category,
-        channel: formData.channel || 'all',
+        channel: formData.channel || 'crm',
         tags: formData.tags,
+        author: formData.author,
         status: postStatus,
         isFeatured: formData.isFeatured,
         featuredImage: {
@@ -883,6 +960,223 @@ export default function PostEditor() {
 
         {/* Right Column: Workflow, Taxonomy & Asset Panels (1 col) */}
         <div className="space-y-6">
+          {/* Author & LinkedIn Profile Panel */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <div
+              className="flex items-center justify-between cursor-pointer select-none"
+              onClick={() => toggleSection('author')}
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600">
+                  <User className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>Author &amp; LinkedIn</span>
+                    <LinkedInIcon size={14} />
+                  </h3>
+                </div>
+              </div>
+              {openSections.author ? (
+                <ChevronUp className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              )}
+            </div>
+
+            {openSections.author && (
+              <div className="space-y-4 pt-1 animate-fade-in">
+                {/* LinkedIn Auto-fetch Box */}
+                <div className="bg-sky-50/70 border border-sky-200/80 rounded-xl p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-sky-900 flex items-center gap-1.5">
+                      <LinkedInIcon size={14} />
+                      <span>Fetch from LinkedIn</span>
+                    </label>
+                    <span className="text-[10px] text-sky-700 font-medium">Auto-fill</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={linkedInInputUrl}
+                      onChange={(e) => setLinkedInInputUrl(e.target.value)}
+                      placeholder="https://www.linkedin.com/in/username"
+                      className="input-field text-xs w-full bg-white text-slate-800 placeholder:text-slate-400 font-mono"
+                    />
+                    <button
+                      type="button"
+                      disabled={fetchingLinkedIn}
+                      onClick={handleFetchLinkedIn}
+                      className="btn-secondary text-xs px-3 py-1.5 font-bold text-sky-700 bg-white hover:bg-sky-50 border-sky-300 shrink-0 flex items-center gap-1 shadow-xs"
+                    >
+                      {fetchingLinkedIn ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-600" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5 text-sky-600" />
+                      )}
+                      <span>{fetchingLinkedIn ? 'Fetching...' : 'Fetch'}</span>
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-sky-800/80 leading-tight">
+                    Paste author&apos;s LinkedIn URL to extract name, role, avatar, and bio.
+                  </p>
+                </div>
+
+                {/* Author Name */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Author Full Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.author.name}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        author: { ...prev.author, name: e.target.value },
+                      }))
+                    }
+                    placeholder="e.g. Himani Chaudhary"
+                    className="input-field text-xs w-full font-bold"
+                  />
+                </div>
+
+                {/* Role / Designation */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Designation / Title (Uppercase Badge)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.author.role}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        author: { ...prev.author, role: e.target.value },
+                      }))
+                    }
+                    placeholder="e.g. SOFTWARE ENGINEER"
+                    className="input-field text-xs w-full uppercase font-mono font-semibold"
+                  />
+                </div>
+
+                {/* Profile Photo URL */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Profile Photo URL
+                  </label>
+                  <div className="flex gap-2 items-center">
+                    {formData.author.avatar ? (
+                      <img
+                        src={formData.author.avatar}
+                        alt={formData.author.name || 'Author'}
+                        className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">
+                        <User className="w-4 h-4" />
+                      </div>
+                    )}
+                    <input
+                      type="url"
+                      value={formData.author.avatar}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          author: { ...prev.author, avatar: e.target.value },
+                        }))
+                      }
+                      placeholder="https://.../profile-photo.jpg"
+                      className="input-field text-xs w-full font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* LinkedIn Profile Link */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    LinkedIn Profile URL
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.author.linkedin}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        author: { ...prev.author, linkedin: val },
+                      }));
+                      setLinkedInInputUrl(val);
+                    }}
+                    placeholder="https://www.linkedin.com/in/username"
+                    className="input-field text-xs w-full font-mono"
+                  />
+                </div>
+
+                {/* Author Bio */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Author Bio Description
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={formData.author.bio}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        author: { ...prev.author, bio: e.target.value },
+                      }))
+                    }
+                    placeholder="Brief background, current role, hands-on technologies, and editorial focus..."
+                    className="input-field text-xs w-full leading-relaxed"
+                  />
+                </div>
+
+                {/* Live Author Card Preview (Image 1 Style) */}
+                <div className="pt-2 border-t border-slate-100">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                    Live Author Card Preview
+                  </span>
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-xs space-y-2">
+                    <div className="flex items-start gap-3">
+                      {formData.author.avatar ? (
+                        <img
+                          src={formData.author.avatar}
+                          alt={formData.author.name || 'Author'}
+                          className="w-12 h-12 rounded-full object-cover border border-slate-200 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-sky-600 text-white font-bold flex items-center justify-center text-xs shrink-0">
+                          {(formData.author.name || 'Author')
+                            .split(' ')
+                            .map((w) => w[0])
+                            .slice(0, 2)
+                            .join('')
+                            .toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-sm text-slate-900 truncate">
+                          {formData.author.name || 'Author Name'}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <LinkedInIcon size={13} />
+                          <span className="text-[10px] font-extrabold uppercase tracking-wide text-sky-950 font-mono">
+                            {formData.author.role || 'SOFTWARE ENGINEER'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-relaxed line-clamp-3">
+                      {formData.author.bio ||
+                        'Author bio describing technical background and focus areas...'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Publishing Controls Panel */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
             <div
@@ -908,16 +1202,15 @@ export default function PostEditor() {
                   </label>
                   <select
                     name="channel"
-                    value={formData.channel || 'all'}
+                    value={formData.channel || 'crm'}
                     onChange={handleChange}
                     className="input-field text-xs w-full font-bold"
                   >
-                    <option value="all">🌐 All Channels (Portfolio + CRM)</option>
-                    <option value="portfolio">💼 Portfolio Only (My-portfillos)</option>
-                    <option value="crm">⚡ CRM Only (GyanVaniAi SaaS)</option>
+                    <option value="crm">⚡ CRM (GyanVaniAi SaaS)</option>
+                    <option value="portfolio">💼 Portfolio (My-portfillos)</option>
                   </select>
                   <p className="text-[10px] text-slate-400 mt-1">
-                    Controls which portal / client surfaces this article.
+                    Select target portal: CRM Website or Portfolio Website.
                   </p>
                 </div>
 

@@ -15,19 +15,51 @@ const POPULAR_SUGGESTIONS = [
 export default function TagsInput({ tags = [], onChange }) {
   const [inputValue, setInputValue] = useState('');
 
-  const handleAddTag = (textToAdd) => {
-    const raw = (textToAdd || inputValue).trim();
+  const handleAddTags = (textToAdd) => {
+    const raw = (typeof textToAdd === 'string' ? textToAdd : inputValue).trim();
     if (!raw) return;
 
-    // Disallow duplicates (case-insensitive check)
-    const exists = tags.some((t) => t.toLowerCase() === raw.toLowerCase());
-    if (exists) {
-      setInputValue('');
-      return;
+    // Support comma-separated tags (e.g., "WhatsApp CRM, AI Automation, Sales Growth")
+    const items = raw
+      .split(/[,;\n]+/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    if (items.length === 0) return;
+
+    const nextTags = [...tags];
+    let addedCount = 0;
+
+    for (const item of items) {
+      const exists = nextTags.some((t) => t.toLowerCase() === item.toLowerCase());
+      if (!exists) {
+        nextTags.push(item);
+        addedCount++;
+      }
     }
 
-    onChange([...tags, raw]);
+    if (addedCount > 0) {
+      onChange(nextTags);
+    }
     setInputValue('');
+  };
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    // Auto-commit tag when a comma is typed
+    if (val.includes(',')) {
+      handleAddTags(val);
+    } else {
+      setInputValue(val);
+    }
+  };
+
+  const handlePaste = (e) => {
+    const pasted = e.clipboardData?.getData('text') || '';
+    if (pasted.includes(',') || pasted.includes(';')) {
+      e.preventDefault();
+      handleAddTags(pasted);
+    }
   };
 
   const handleRemoveTag = (indexToRemove) => {
@@ -37,7 +69,7 @@ export default function TagsInput({ tags = [], onChange }) {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      handleAddTag();
+      handleAddTags(inputValue);
     }
   };
 
@@ -60,7 +92,7 @@ export default function TagsInput({ tags = [], onChange }) {
               <button
                 type="button"
                 onClick={() => handleRemoveTag(idx)}
-                className="text-indigo-400 hover:text-indigo-700 transition-colors p-0.5 rounded"
+                className="text-indigo-400 hover:text-indigo-700 transition-colors p-0.5 rounded cursor-pointer"
                 title={`Remove ${tag}`}
                 aria-label={`Remove tag ${tag}`}
               >
@@ -78,17 +110,18 @@ export default function TagsInput({ tags = [], onChange }) {
           <input
             type="text"
             className="input-field pl-8 text-xs py-1.5 w-full"
-            placeholder="Add tag and press Enter or comma..."
+            placeholder="Type tags (use comma to separate)..."
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={handleInputChange}
+            onPaste={handlePaste}
             onKeyDown={handleKeyDown}
           />
         </div>
         <button
           type="button"
-          onClick={() => handleAddTag()}
+          onClick={() => handleAddTags(inputValue)}
           disabled={!inputValue.trim()}
-          className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1"
+          className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1 cursor-pointer shrink-0"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Add</span>
@@ -108,8 +141,8 @@ export default function TagsInput({ tags = [], onChange }) {
               <button
                 key={sug}
                 type="button"
-                onClick={() => handleAddTag(sug)}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 text-[11px] font-medium transition-all"
+                onClick={() => handleAddTags(sug)}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 text-[11px] font-medium transition-all cursor-pointer"
               >
                 <Plus className="w-2.5 h-2.5 text-slate-400" />
                 <span>{sug}</span>
