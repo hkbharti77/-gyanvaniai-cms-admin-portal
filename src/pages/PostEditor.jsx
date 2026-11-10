@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -31,6 +31,7 @@ import {
   BookOpen,
   Send,
   User,
+  UploadCloud,
 } from 'lucide-react';
 
 const LinkedInIcon = ({ className = 'w-4 h-4', size = 16 }) => (
@@ -70,6 +71,8 @@ export default function PostEditor() {
   const [copiedSlug, setCopiedSlug] = useState(false);
   const [fetchingLinkedIn, setFetchingLinkedIn] = useState(false);
   const [linkedInInputUrl, setLinkedInInputUrl] = useState('');
+  const [uploadingAuthorPhoto, setUploadingAuthorPhoto] = useState(false);
+  const authorPhotoInputRef = useRef(null);
 
   // Accordion sections
   const [openSections, setOpenSections] = useState({
@@ -142,15 +145,15 @@ export default function PostEditor() {
         if (isEditMode) {
           const postRes = await api.getPostById(id);
           const p = postRes.post;
-          const authorData = (typeof p.author === 'object' && p.author !== null)
-            ? p.author
-            : {
-                name: typeof p.author === 'string' ? p.author : '',
-                role: p.authorRole || 'SOFTWARE ENGINEER',
-                bio: p.authorBio || '',
-                avatar: p.authorAvatar || p.authorImage || '',
-                linkedin: p.authorLinkedin || '',
-              };
+          const rawAuthor = (typeof p.author === 'object' && p.author !== null) ? p.author : {};
+          const rawDetails = (typeof p.authorDetails === 'object' && p.authorDetails !== null) ? p.authorDetails : {};
+          const authorData = {
+            name: rawAuthor.name || rawDetails.name || (typeof p.author === 'string' ? p.author : ''),
+            role: rawAuthor.role || rawDetails.role || p.authorRole || 'SOFTWARE ENGINEER',
+            bio: rawAuthor.bio || rawDetails.bio || p.authorBio || '',
+            avatar: rawAuthor.avatar || rawAuthor.image || rawDetails.avatar || rawDetails.image || p.authorAvatar || p.authorImage || '',
+            linkedin: rawAuthor.linkedin || rawDetails.linkedin || p.authorLinkedin || '',
+          };
           if (authorData.linkedin) {
             setLinkedInInputUrl(authorData.linkedin);
           }
@@ -255,6 +258,49 @@ export default function PostEditor() {
       showToast(err.message || 'Could not auto-fetch LinkedIn profile. You can enter details manually.', 'error');
     } finally {
       setFetchingLinkedIn(false);
+    }
+  };
+
+  // Upload custom author profile image
+  const handleAuthorPhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      showToast('Please select a valid image (JPG, PNG, or WebP).', 'error');
+      return;
+    }
+
+    try {
+      setUploadingAuthorPhoto(true);
+      const reader = new FileReader();
+      const base64 = await new Promise((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const res = await api.uploadMedia({
+        fileData: base64,
+        originalName: `author-${file.name.replace(/\.[^/.]+$/, '')}.webp`,
+        altText: formData.author.name || 'Author profile photo',
+      });
+
+      if (res?.media?.url) {
+        setFormData((prev) => ({
+          ...prev,
+          author: { ...prev.author, avatar: res.media.url },
+        }));
+        showToast('Author photo uploaded successfully!');
+      } else {
+        throw new Error('Upload succeeded but no image URL was returned.');
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to upload author photo.', 'error');
+    } finally {
+      setUploadingAuthorPhoto(false);
+      if (authorPhotoInputRef.current) authorPhotoInputRef.current.value = '';
     }
   };
 
@@ -427,24 +473,9 @@ export default function PostEditor() {
     }
   };
 
-  // Direct Publish Action
+  // Direct Publish Action - Always saves full updated form data!
   const handlePublishNow = async () => {
-    if (isEditMode) {
-      try {
-        setSaving(true);
-        await api.publishPost(id);
-        showToast('Article published live to gyanvaniai.com!');
-        setFormData((prev) => ({ ...prev, status: 'published', version: prev.version + 1 }));
-        const revRes = await api.getRevisions(id);
-        setRevisions(revRes.revisions || []);
-      } catch (err) {
-        showToast(err.message || 'Publishing failed', 'error');
-      } finally {
-        setSaving(false);
-      }
-    } else {
-      handleSave('published');
-    }
+    await handleSave('published');
   };
 
   // Rollback to Revision
@@ -1060,20 +1091,25 @@ export default function PostEditor() {
                   />
                 </div>
 
-                {/* Profile Photo URL */}
+                {/* Profile Photo URL & Upload */}
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
-                    Profile Photo URL
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700">
+                      Profile Photo
+                    </label>
+                    <span className="text-[11px] text-slate-400">
+                      Upload an image or paste direct URL
+                    </span>
+                  </div>
                   <div className="flex gap-2 items-center">
                     {formData.author.avatar ? (
                       <img
                         src={formData.author.avatar}
                         alt={formData.author.name || 'Author'}
-                        className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
+                        className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">
                         <User className="w-4 h-4" />
                       </div>
                     )}
@@ -1086,9 +1122,30 @@ export default function PostEditor() {
                           author: { ...prev.author, avatar: e.target.value },
                         }))
                       }
-                      placeholder="https://.../profile-photo.jpg"
-                      className="input-field text-xs w-full font-mono"
+                      placeholder="https://.../profile-photo.jpg or upload from device"
+                      className="input-field text-xs flex-1 font-mono"
                     />
+                    <input
+                      ref={authorPhotoInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={handleAuthorPhotoUpload}
+                    />
+                    <button
+                      type="button"
+                      disabled={uploadingAuthorPhoto}
+                      onClick={() => authorPhotoInputRef.current?.click()}
+                      className="btn-secondary text-xs px-3 py-2 flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
+                      title="Upload author photo from device"
+                    >
+                      {uploadingAuthorPhoto ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500" />
+                      ) : (
+                        <UploadCloud className="w-3.5 h-3.5 text-indigo-600" />
+                      )}
+                      <span>{uploadingAuthorPhoto ? 'Uploading...' : 'Upload Photo'}</span>
+                    </button>
                   </div>
                 </div>
 
@@ -1115,9 +1172,28 @@ export default function PostEditor() {
 
                 {/* Author Bio */}
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
-                    Author Bio Description
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700">
+                      Author Bio Description
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const name = formData.author.name.trim() || 'The author';
+                        const role = (formData.author.role.trim() || 'software engineer').toLowerCase();
+                        setFormData((prev) => ({
+                          ...prev,
+                          author: {
+                            ...prev.author,
+                            bio: `${name} is a ${role} with hands-on experience in building modern web applications, scalable backend systems, and AI workflows.`,
+                          },
+                        }));
+                      }}
+                      className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                    >
+                      Auto-generate bio
+                    </button>
+                  </div>
                   <textarea
                     rows={4}
                     value={formData.author.bio}
