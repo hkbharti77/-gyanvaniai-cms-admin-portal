@@ -1,10 +1,15 @@
 import React from 'react';
 import { Globe } from 'lucide-react';
 
-export default function GoogleSearchPreview({ title, description, slug }) {
+export default function GoogleSearchPreview({ title, description, slug, channel = 'crm' }) {
+  const isPortfolio = channel === 'portfolio';
   const displayTitle = title || 'Untitled Article';
   const displayDesc = description || 'No description provided. Add an excerpt or SEO description to optimize click-through rate from search engines.';
   const displaySlug = slug || 'article-slug';
+  const siteBrand = isPortfolio ? 'Himanshu Bharti' : 'GyanVaniAi Blog';
+  const serpUrl = isPortfolio
+    ? `https://hkbharti77.website › #blog › ${displaySlug}`
+    : `https://www.gyanvaniai.com › blog › ${displaySlug}`;
 
   return (
     <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-2">
@@ -25,16 +30,16 @@ export default function GoogleSearchPreview({ title, description, slug }) {
             <Globe className="w-3.5 h-3.5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-slate-800 leading-tight">GyanVaniAi Blog</span>
+            <span className="text-xs font-bold text-slate-800 leading-tight">{siteBrand}</span>
             <span className="text-[11px] text-slate-500 font-mono truncate max-w-[280px]">
-              https://www.gyanvaniai.com › blog › {displaySlug}
+              {serpUrl}
             </span>
           </div>
         </div>
 
         {/* Clickable Google Blue Title */}
         <h4 className="text-[15px] font-medium text-[#1a0dab] hover:underline cursor-pointer leading-snug pt-0.5">
-          {displayTitle} | GyanVaniAi
+          {displayTitle} | {isPortfolio ? 'Himanshu Bharti' : 'GyanVaniAi'}
         </h4>
 
         {/* Snippet Description */}

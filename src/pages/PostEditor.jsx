@@ -322,8 +322,16 @@ export default function PostEditor() {
     showToast('Slug generated from article title.');
   };
 
+  const isPortfolio = formData.channel === 'portfolio';
+  const getArticleFullUrl = (slug) => {
+    const cleanSlug = slug || 'article-slug';
+    return isPortfolio
+      ? `https://hkbharti77.website/#blog?article=${cleanSlug}`
+      : `https://www.gyanvaniai.com/blog/${cleanSlug}`;
+  };
+
   const handleCopySlug = () => {
-    const fullUrl = `https://www.gyanvaniai.com/blog/${formData.slug || 'article-slug'}`;
+    const fullUrl = getArticleFullUrl(formData.slug);
     navigator.clipboard.writeText(fullUrl).then(() => {
       setCopiedSlug(true);
       setTimeout(() => setCopiedSlug(false), 2000);
@@ -438,7 +446,7 @@ export default function PostEditor() {
         seo: {
           metaTitle: formData.seoMetaTitle || formData.title,
           metaDescription: formData.seoMetaDescription || formData.excerpt.slice(0, 160),
-          canonicalUrl: formData.seoCanonicalUrl || `https://www.gyanvaniai.com/blog/${formData.slug}`,
+          canonicalUrl: formData.seoCanonicalUrl || getArticleFullUrl(formData.slug),
           ogImage: formData.seoOgImage || formData.featuredImageUrl,
           twitterCard: 'summary_large_image',
           keywords: formData.seoKeywords ? formData.seoKeywords.split(',').map((k) => k.trim()).filter(Boolean) : [],
@@ -514,7 +522,7 @@ export default function PostEditor() {
     }
     try {
       if (formData.status === 'published') {
-        window.open(`https://www.gyanvaniai.com/blog/${formData.slug}`, '_blank');
+        window.open(getArticleFullUrl(formData.slug), '_blank');
       } else {
         const tokenRes = await api.getPreviewToken(id);
         window.open(tokenRes.previewUrl, '_blank');
@@ -722,8 +730,8 @@ export default function PostEditor() {
 
               <div className="flex items-center gap-2">
                 <div className="flex-1 flex items-center bg-white border border-slate-300 rounded-lg overflow-hidden focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100">
-                  <span className="px-3 py-2 text-xs font-mono text-slate-400 bg-slate-100/60 border-r border-slate-200 select-none">
-                    https://www.gyanvaniai.com/blog/
+                  <span className="px-3 py-2 text-xs font-mono text-slate-400 bg-slate-100/60 border-r border-slate-200 select-none whitespace-nowrap">
+                    {isPortfolio ? 'https://hkbharti77.website/#blog?article=' : 'https://www.gyanvaniai.com/blog/'}
                   </span>
                   <input
                     type="text"
@@ -908,7 +916,7 @@ export default function PostEditor() {
                       name="seoCanonicalUrl"
                       value={formData.seoCanonicalUrl}
                       onChange={handleChange}
-                      placeholder={`https://www.gyanvaniai.com/blog/${formData.slug}`}
+                      placeholder={getArticleFullUrl(formData.slug)}
                       className="input-field text-xs w-full font-mono"
                     />
                   </div>
@@ -934,12 +942,14 @@ export default function PostEditor() {
                     title={formData.seoMetaTitle || formData.title}
                     description={formData.seoMetaDescription || formData.excerpt}
                     slug={formData.slug || 'article-slug'}
+                    channel={formData.channel}
                   />
 
                   <SocialSharePreview
                     title={formData.seoMetaTitle || formData.title}
                     description={formData.seoMetaDescription || formData.excerpt}
                     imageUrl={formData.seoOgImage || formData.featuredImageUrl}
+                    channel={formData.channel}
                   />
                 </div>
               </div>
@@ -1282,8 +1292,8 @@ export default function PostEditor() {
                     onChange={handleChange}
                     className="input-field text-xs w-full font-bold"
                   >
-                    <option value="crm">⚡ CRM (GyanVaniAi SaaS)</option>
-                    <option value="portfolio">💼 Portfolio (My-portfillos)</option>
+                    <option value="crm">⚡ CRM (GyanVaniAi SaaS — gyanvaniai.com)</option>
+                    <option value="portfolio">💼 Portfolio (Engineering Dispatches — hkbharti77.website)</option>
                   </select>
                   <p className="text-[10px] text-slate-400 mt-1">
                     Select target portal: CRM Website or Portfolio Website.

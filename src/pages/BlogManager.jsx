@@ -222,10 +222,16 @@ export default function BlogManager() {
     }
   };
 
+  const getPostLiveUrl = (post) => {
+    return post.channel === 'portfolio'
+      ? `https://hkbharti77.website/#blog?article=${post.slug}`
+      : `https://www.gyanvaniai.com/blog/${post.slug}`;
+  };
+
   const handlePreview = async (post) => {
     try {
       if (post.status === 'published') {
-        window.open(`https://www.gyanvaniai.com/blog/${post.slug}`, '_blank');
+        window.open(getPostLiveUrl(post), '_blank');
       } else {
         const tokenRes = await api.getPreviewToken(post.id);
         window.open(tokenRes.previewUrl, '_blank');
@@ -250,7 +256,7 @@ export default function BlogManager() {
   };
 
   const handleCopySlug = (post) => {
-    const fullUrl = `https://www.gyanvaniai.com/blog/${post.slug}`;
+    const fullUrl = getPostLiveUrl(post);
     navigator.clipboard.writeText(fullUrl).then(() => {
       setCopiedSlugId(post.id);
       setTimeout(() => setCopiedSlugId(null), 2000);

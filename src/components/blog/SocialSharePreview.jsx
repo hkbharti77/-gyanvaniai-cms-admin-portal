@@ -3,10 +3,14 @@ import { Share2 } from 'lucide-react';
 
 const FALLBACK_OG_IMAGE = '/portfolio_crm.webp';
 
-export default function SocialSharePreview({ title, description, imageUrl }) {
+export default function SocialSharePreview({ title, description, imageUrl, channel = 'crm' }) {
+  const isPortfolio = channel === 'portfolio';
   const displayTitle = title || 'Untitled Article';
-  const displayDesc = description || 'Read insightful strategies on WhatsApp CRM, multi-agent AI, and enterprise automation on GyanVaniAi.';
+  const displayDesc = description || (isPortfolio
+    ? 'Engineering case study, distributed systems architecture, and AI automation workflows.'
+    : 'Read insightful strategies on WhatsApp CRM, multi-agent AI, and enterprise automation on GyanVaniAi.');
   const displayImage = imageUrl || FALLBACK_OG_IMAGE;
+  const brandDomain = isPortfolio ? 'HKBHARTI77.WEBSITE' : 'GYANVANIAI.COM';
 
   return (
     <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-2.5">
@@ -34,7 +38,7 @@ export default function SocialSharePreview({ title, description, imageUrl }) {
 
         <div className="p-3.5 space-y-1 bg-slate-50/50">
           <span className="text-[10px] font-mono font-bold text-slate-400 tracking-wider uppercase block">
-            GYANVANIAI.COM
+            {brandDomain}
           </span>
           <h4 className="text-xs font-bold text-slate-900 line-clamp-1 leading-snug">
             {displayTitle}
