@@ -16,6 +16,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   Loader2,
+  TrendingUp,
+  TrendingDown,
+  Eye,
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -27,19 +30,21 @@ export default function Dashboard() {
     menusCount: 0,
     activeSessions: 0,
   });
+  const [visitorStats, setVisitorStats] = useState(null);
   const [recentAudits, setRecentAudits] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        const [usersRes, rolesRes, permsRes, menusRes, settingsRes, auditsRes] = await Promise.allSettled([
+        const [usersRes, rolesRes, permsRes, menusRes, settingsRes, auditsRes, visitorRes] = await Promise.allSettled([
           api.getUsers({ limit: 1 }),
           api.getRoles(),
           api.getPermissions(),
           api.getMenus(),
           api.getSettings(),
           api.getAuditLogs({ limit: 6 }),
+          api.getVisitorAnalytics({ days: 2 }),
         ]);
 
         setStats({
@@ -52,6 +57,10 @@ export default function Dashboard() {
 
         if (auditsRes.status === 'fulfilled') {
           setRecentAudits(auditsRes.value.logs || []);
+        }
+
+        if (visitorRes.status === 'fulfilled' && visitorRes.value?.summary) {
+          setVisitorStats(visitorRes.value.summary);
         }
       } catch (err) {
         console.error('Failed to load dashboard metrics:', err);
@@ -95,6 +104,59 @@ export default function Dashboard() {
         {/* Ambient subtle glow */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-100/30 rounded-full blur-3xl pointer-events-none" />
       </div>
+
+      {/* Real-time Visitor Traffic Banner: Today vs Yesterday */}
+      {visitorStats && (
+        <div className="p-4 md:p-5 rounded-xl bg-gradient-to-r from-slate-900 to-indigo-950 text-white shadow-sm border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 rounded-xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-indigo-400 shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs uppercase tracking-wider font-bold text-indigo-300">
+                  Live Traffic Telemetry
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                  Cookieless &bull; DPDP/GDPR
+                </span>
+              </div>
+              <div className="flex items-baseline gap-3 mt-1">
+                <span className="text-2xl font-extrabold text-white">
+                  {visitorStats.today?.visitors || 0}
+                </span>
+                <span className="text-xs text-slate-300 font-medium">visitors today</span>
+                <span className="text-slate-400 text-xs">|</span>
+                <span className="text-xs text-slate-300">
+                  Yesterday: <strong className="text-white font-semibold">{visitorStats.yesterday?.visitors || 0}</strong>
+                </span>
+                {visitorStats.growth && (
+                  <span
+                    className={`inline-flex items-center gap-0.5 text-xs font-bold px-2 py-0.5 rounded-full ${
+                      visitorStats.growth.isVisitorPositive
+                        ? 'bg-emerald-500/20 text-emerald-300'
+                        : 'bg-rose-500/20 text-rose-300'
+                    }`}
+                  >
+                    {visitorStats.growth.isVisitorPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                    {visitorStats.growth.visitorsPercent > 0 ? `+${visitorStats.growth.visitorsPercent}%` : `${visitorStats.growth.visitorsPercent}%`}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Link
+              to="/admin/visitor-analytics"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors shrink-0"
+            >
+              <span>View Full Analytics</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

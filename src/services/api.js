@@ -312,4 +312,10 @@ export const api = {
     method: 'PATCH',
     body: JSON.stringify(data),
   }),
+
+  // Privacy-First Visitor & Traffic Analytics (Cookieless, DPDP 2023 & GDPR Compliant)
+  getVisitorAnalytics: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/api/admin/analytics/overview${query ? '?' + query : ''}`);
+  },
 };

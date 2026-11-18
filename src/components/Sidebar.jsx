@@ -29,6 +29,7 @@ import {
   ExternalLink,
   Briefcase,
   ShieldAlert,
+  Activity,
 } from 'lucide-react';
 
 const ICON_MAP = {
@@ -52,6 +53,7 @@ const ICON_MAP = {
   Layers,
   Sparkles,
   Briefcase,
+  Activity,
 };
 
 // Canonical enterprise modern sidebar organization
@@ -106,8 +108,14 @@ const SECTIONS_CONFIG = [
     label: 'Growth',
     items: [
       {
+        routeKey: '/admin/visitor-analytics',
+        defaultLabel: 'Visitor Traffic',
+        defaultIcon: 'Activity',
+        permission: 'analytics.read',
+      },
+      {
         routeKey: '/admin/blog/analytics',
-        defaultLabel: 'Analytics',
+        defaultLabel: 'Article Analytics',
         defaultIcon: 'BarChart3',
         permission: 'analytics.read',
       },

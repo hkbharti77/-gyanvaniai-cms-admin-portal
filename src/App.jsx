@@ -31,6 +31,7 @@ import LeadsManager from './pages/LeadsManager';
 import LandingPageBuilder from './pages/LandingPageBuilder';
 import PortfolioMediaManager from './pages/PortfolioMediaManager';
 import PrivacyRequestsManager from './pages/PrivacyRequestsManager';
+import VisitorAnalytics from './pages/VisitorAnalytics';
 
 export default function App() {
   return (
@@ -163,6 +164,14 @@ export default function App() {
               element={
                 <ProtectedRoute requiredPermission="media.read">
                   <PortfolioMediaManager />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="visitor-analytics"
+              element={
+                <ProtectedRoute requiredPermission="analytics.read">
+                  <VisitorAnalytics />
                 </ProtectedRoute>
               }
             />
