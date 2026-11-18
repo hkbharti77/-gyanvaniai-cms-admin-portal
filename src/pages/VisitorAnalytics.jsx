@@ -128,6 +128,7 @@ export default function VisitorAnalytics() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [countrySearch, setCountrySearch] = useState('');
+  const [hideUnknown, setHideUnknown] = useState(false);
 
   const [data, setData] = useState({
     timeframe: { key: '7d', label: 'Last 7 Days', isHourly: false },
@@ -187,6 +188,7 @@ export default function VisitorAnalytics() {
   const growth = summary.growth || {};
 
   const filteredCountries = (data.topCountries || []).filter((c) => {
+    if (hideUnknown && (c.countryCode === 'Unknown' || c.country === 'Unknown')) return false;
     if (!countrySearch) return true;
     const s = countrySearch.toLowerCase();
     return c.country.toLowerCase().includes(s) || c.countryCode.toLowerCase().includes(s);
@@ -509,16 +511,27 @@ export default function VisitorAnalytics() {
             )}
           </div>
 
-          {/* Country Search Bar */}
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search countries..."
-              value={countrySearch}
-              onChange={(e) => setCountrySearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
-            />
+          {/* Country Search Bar & Filter Controls */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="relative flex-1">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search countries..."
+                value={countrySearch}
+                onChange={(e) => setCountrySearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+            <label className="flex items-center gap-1.5 text-[11px] text-slate-500 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={hideUnknown}
+                onChange={(e) => setHideUnknown(e.target.checked)}
+                className="rounded-xs text-indigo-600 focus:ring-0 cursor-pointer"
+              />
+              <span>Hide Unresolved/Local</span>
+            </label>
           </div>
 
           <div className="overflow-x-auto">
@@ -554,8 +567,12 @@ export default function VisitorAnalytics() {
                       >
                         <td className="py-2.5 px-3 font-semibold text-slate-800 flex items-center gap-2 font-sans">
                           <span className="text-base leading-none">{getFlagEmoji(c.countryCode)}</span>
-                          <span className="truncate max-w-[150px]">{c.country}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">({c.countryCode})</span>
+                          <span className="truncate max-w-[150px]">
+                            {c.countryCode === 'Unknown' ? 'Direct / Local Test' : c.country}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            ({c.countryCode === 'Unknown' ? 'Local/VPN' : c.countryCode})
+                          </span>
                         </td>
                         <td className="py-2.5 px-3 text-right font-bold text-indigo-600">
                           {c.visitors}
