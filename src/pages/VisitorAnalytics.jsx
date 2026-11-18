@@ -22,6 +22,9 @@ import {
   MapPin,
   X,
   Search,
+  Zap,
+  ToggleLeft,
+  Activity,
 } from 'lucide-react';
 
 /* ── Unicode Flag Helper from 2-letter ISO Country Code ────────────────────── */
@@ -130,6 +133,11 @@ export default function VisitorAnalytics() {
   const [countrySearch, setCountrySearch] = useState('');
   const [hideUnknown, setHideUnknown] = useState(false);
 
+  // Tab selections for modular telemetry panes
+  const [pagesTab, setPagesTab] = useState('pages'); // 'pages' | 'routes' | 'hostnames'
+  const [sourcesTab, setSourcesTab] = useState('referrers'); // 'referrers' | 'utm'
+  const [devicesTab, setDevicesTab] = useState('browsers'); // 'devices' | 'browsers'
+
   const [data, setData] = useState({
     timeframe: { key: '7d', label: 'Last 7 Days', isHourly: false },
     summary: {
@@ -145,6 +153,16 @@ export default function VisitorAnalytics() {
     topPages: [],
     topReferrers: [],
     deviceBreakdown: [],
+    pages: [],
+    routes: [],
+    hostnames: [],
+    referrers: [],
+    utmParameters: [],
+    devices: [],
+    browsers: [],
+    operatingSystems: [],
+    events: [],
+    flags: [],
     externalTools: {},
     compliance: {},
   });
@@ -484,6 +502,369 @@ export default function VisitorAnalytics() {
         </div>
 
         <VisitorTrendChart data={data.trend} isHourly={Boolean(data.timeframe?.isHourly)} />
+      </div>
+
+      {/* ── Modular Edge Telemetry Panes (Vercel & Cloudflare Layout) ───────── */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Activity className="w-4 h-4 text-indigo-600" />
+              Edge Telemetry Panes &bull; {data.timeframe?.label || 'Selected Period'}
+            </h2>
+            <p className="text-xs text-slate-500">
+              Live modular breakdown across URLs, referrers, geo-distribution, user-agents, events, and feature flags.
+            </p>
+          </div>
+        </div>
+
+        {/* Panes Row 1: Pages/Routes/Hostnames & Referrers/UTM */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Card 1: Pages | Routes | Hostnames */}
+          <div className="bg-[#0a0a0a] text-neutral-100 rounded-xl border border-neutral-800 p-4 md:p-5 flex flex-col justify-between min-h-[220px]">
+            <div>
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
+                <div className="flex items-center gap-5 text-xs font-semibold">
+                  {[
+                    { key: 'pages', label: 'Pages' },
+                    { key: 'routes', label: 'Routes' },
+                    { key: 'hostnames', label: 'Hostnames' },
+                  ].map((t) => (
+                    <button
+                      key={t.key}
+                      onClick={() => setPagesTab(t.key)}
+                      className={`pb-1 transition-colors relative cursor-pointer ${
+                        pagesTab === t.key
+                          ? 'text-white font-bold'
+                          : 'text-neutral-400 hover:text-neutral-200'
+                      }`}
+                    >
+                      {t.label}
+                      {pagesTab === t.key && (
+                        <span className="absolute -bottom-2.5 left-0 right-0 h-[2px] bg-white rounded-full" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[10px] tracking-wider font-semibold text-neutral-400 uppercase">
+                  VISITORS
+                </span>
+              </div>
+
+              {/* Items List */}
+              <div className="pt-2 divide-y divide-neutral-900">
+                {pagesTab === 'pages' && (
+                  (data.pages || data.topPages || []).length === 0 ? (
+                    <div className="py-10 text-center text-xs text-neutral-500">No pageviews recorded yet.</div>
+                  ) : (
+                    (data.pages || data.topPages || []).slice(0, 6).map((p, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 text-xs font-mono">
+                        <span className="text-neutral-300 truncate max-w-[280px]" title={p.path}>
+                          {p.path}
+                        </span>
+                        <span className="text-white font-bold">{p.visitors ?? p.views}</span>
+                      </div>
+                    ))
+                  )
+                )}
+
+                {pagesTab === 'routes' && (
+                  (data.routes || []).length === 0 ? (
+                    <div className="py-10 text-center text-xs text-neutral-500">No routes captured yet.</div>
+                  ) : (
+                    (data.routes || []).slice(0, 6).map((r, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 text-xs font-mono">
+                        <span className="text-neutral-300 truncate max-w-[280px]" title={r.route}>
+                          {r.route}
+                        </span>
+                        <span className="text-white font-bold">{r.visitors ?? r.views}</span>
+                      </div>
+                    ))
+                  )
+                )}
+
+                {pagesTab === 'hostnames' && (
+                  (data.hostnames || []).length === 0 ? (
+                    <div className="py-10 text-center text-xs text-neutral-500">No hostnames captured yet.</div>
+                  ) : (
+                    (data.hostnames || []).slice(0, 6).map((h, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 text-xs font-mono">
+                        <span className="text-neutral-300 truncate max-w-[280px]" title={h.hostname}>
+                          {h.hostname}
+                        </span>
+                        <span className="text-white font-bold">{h.visitors ?? h.views}</span>
+                      </div>
+                    ))
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Referrers | UTM Parameters */}
+          <div className="bg-[#0a0a0a] text-neutral-100 rounded-xl border border-neutral-800 p-4 md:p-5 flex flex-col justify-between min-h-[220px]">
+            <div>
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
+                <div className="flex items-center gap-5 text-xs font-semibold">
+                  {[
+                    { key: 'referrers', label: 'Referrers' },
+                    { key: 'utm', label: 'UTM Parameters' },
+                  ].map((t) => (
+                    <button
+                      key={t.key}
+                      onClick={() => setSourcesTab(t.key)}
+                      className={`pb-1 transition-colors relative cursor-pointer ${
+                        sourcesTab === t.key
+                          ? 'text-white font-bold'
+                          : 'text-neutral-400 hover:text-neutral-200'
+                      }`}
+                    >
+                      {t.label}
+                      {sourcesTab === t.key && (
+                        <span className="absolute -bottom-2.5 left-0 right-0 h-[2px] bg-white rounded-full" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[10px] tracking-wider font-semibold text-neutral-400 uppercase">
+                  VISITORS
+                </span>
+              </div>
+
+              {/* Items List */}
+              <div className="pt-2 divide-y divide-neutral-900">
+                {sourcesTab === 'referrers' && (
+                  (data.referrers || data.topReferrers || []).length === 0 ? (
+                    <div className="py-10 flex flex-col items-center justify-center text-center text-neutral-500 space-y-2">
+                      <TrendingDown className="w-5 h-5 text-neutral-600" />
+                      <span className="text-xs">No data found for selected period.</span>
+                    </div>
+                  ) : (
+                    (data.referrers || data.topReferrers || []).slice(0, 6).map((ref, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 text-xs">
+                        <span className="text-neutral-300 truncate max-w-[280px]" title={ref.referrer}>
+                          {ref.referrer}
+                        </span>
+                        <span className="text-white font-bold font-mono">{ref.visitors ?? ref.count}</span>
+                      </div>
+                    ))
+                  )
+                )}
+
+                {sourcesTab === 'utm' && (
+                  (data.utmParameters || []).length === 0 ? (
+                    <div className="py-10 flex flex-col items-center justify-center text-center text-neutral-500 space-y-2">
+                      <TrendingDown className="w-5 h-5 text-neutral-600" />
+                      <span className="text-xs">No data found for selected period.</span>
+                    </div>
+                  ) : (
+                    (data.utmParameters || []).slice(0, 6).map((u, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 text-xs">
+                        <span className="text-neutral-300 truncate max-w-[280px]" title={u.utm}>
+                          {u.utm}
+                        </span>
+                        <span className="text-white font-bold font-mono">{u.visitors ?? u.count}</span>
+                      </div>
+                    ))
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Panes Row 2: Countries | Devices / Browsers | Operating Systems */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Card 3: Countries */}
+          <div className="bg-[#0a0a0a] text-neutral-100 rounded-xl border border-neutral-800 p-4 md:p-5 flex flex-col justify-between min-h-[220px]">
+            <div>
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
+                <span className="text-xs font-bold text-white">Countries</span>
+                <span className="text-[10px] tracking-wider font-semibold text-neutral-400 uppercase">
+                  VISITORS
+                </span>
+              </div>
+
+              <div className="pt-2 divide-y divide-neutral-900">
+                {(data.topCountries || []).length === 0 ? (
+                  <div className="py-10 text-center text-xs text-neutral-500">No country data yet.</div>
+                ) : (
+                  (data.topCountries || []).slice(0, 6).map((c, i) => (
+                    <div key={i} className="flex items-center justify-between py-2 text-xs">
+                      <div className="flex items-center gap-2 truncate max-w-[170px]">
+                        <span className="text-base leading-none">{getFlagEmoji(c.countryCode)}</span>
+                        <span className="text-neutral-200 font-medium truncate">
+                          {c.countryCode === 'Unknown' ? 'Direct / Local Test' : c.country}
+                        </span>
+                      </div>
+                      <span className="text-white font-bold font-mono">{c.percentage}%</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Devices | Browsers */}
+          <div className="bg-[#0a0a0a] text-neutral-100 rounded-xl border border-neutral-800 p-4 md:p-5 flex flex-col justify-between min-h-[220px]">
+            <div>
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
+                <div className="flex items-center gap-5 text-xs font-semibold">
+                  {[
+                    { key: 'devices', label: 'Devices' },
+                    { key: 'browsers', label: 'Browsers' },
+                  ].map((t) => (
+                    <button
+                      key={t.key}
+                      onClick={() => setDevicesTab(t.key)}
+                      className={`pb-1 transition-colors relative cursor-pointer ${
+                        devicesTab === t.key
+                          ? 'text-white font-bold'
+                          : 'text-neutral-400 hover:text-neutral-200'
+                      }`}
+                    >
+                      {t.label}
+                      {devicesTab === t.key && (
+                        <span className="absolute -bottom-2.5 left-0 right-0 h-[2px] bg-white rounded-full" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[10px] tracking-wider font-semibold text-neutral-400 uppercase">
+                  VISITORS
+                </span>
+              </div>
+
+              <div className="pt-2 divide-y divide-neutral-900">
+                {devicesTab === 'devices' && (
+                  (data.devices || []).length === 0 ? (
+                    <div className="py-10 text-center text-xs text-neutral-500">No device telemetry yet.</div>
+                  ) : (
+                    (data.devices || []).slice(0, 6).map((d, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 text-xs">
+                        <span className="text-neutral-200 font-medium capitalize">{d.name}</span>
+                        <span className="text-white font-bold font-mono">{d.percentage}%</span>
+                      </div>
+                    ))
+                  )
+                )}
+
+                {devicesTab === 'browsers' && (
+                  (data.browsers || []).length === 0 ? (
+                    <div className="py-10 text-center text-xs text-neutral-500">No browser telemetry yet.</div>
+                  ) : (
+                    (data.browsers || []).slice(0, 6).map((b, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 text-xs">
+                        <span className="text-neutral-200 font-medium">{b.name}</span>
+                        <span className="text-white font-bold font-mono">{b.percentage}%</span>
+                      </div>
+                    ))
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Card 5: Operating Systems */}
+          <div className="bg-[#0a0a0a] text-neutral-100 rounded-xl border border-neutral-800 p-4 md:p-5 flex flex-col justify-between min-h-[220px]">
+            <div>
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
+                <span className="text-xs font-bold text-white">Operating Systems</span>
+                <span className="text-[10px] tracking-wider font-semibold text-neutral-400 uppercase">
+                  VISITORS
+                </span>
+              </div>
+
+              <div className="pt-2 divide-y divide-neutral-900">
+                {(data.operatingSystems || []).length === 0 ? (
+                  <div className="py-10 text-center text-xs text-neutral-500">No OS telemetry yet.</div>
+                ) : (
+                  (data.operatingSystems || []).slice(0, 6).map((o, i) => (
+                    <div key={i} className="flex items-center justify-between py-2 text-xs">
+                      <span className="text-neutral-200 font-medium">{o.name}</span>
+                      <span className="text-white font-bold font-mono">{o.percentage}%</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Panes Row 3: Events & Flags */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Card 6: Events */}
+          <div className="bg-[#0a0a0a] text-neutral-100 rounded-xl border border-neutral-800 p-4 md:p-5 flex flex-col justify-between min-h-[180px]">
+            <div>
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
+                <span className="text-xs font-bold text-white">Events</span>
+                <div className="flex items-center gap-6 text-[10px] tracking-wider font-semibold text-neutral-400 uppercase">
+                  <span>VISITORS</span>
+                  <span>TOTAL</span>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                {(data.events || []).length === 0 ? (
+                  <div className="py-8 flex flex-col items-center justify-center text-center text-neutral-500 space-y-2">
+                    <div className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400">
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-medium">No custom events</span>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-neutral-900">
+                    {(data.events || []).slice(0, 5).map((ev, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 text-xs">
+                        <span className="text-neutral-200 font-mono">{ev.name}</span>
+                        <div className="flex items-center gap-8 font-mono text-xs">
+                          <span className="text-neutral-300 font-bold">{ev.visitors}</span>
+                          <span className="text-white font-bold">{ev.total}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Card 7: Flags */}
+          <div className="bg-[#0a0a0a] text-neutral-100 rounded-xl border border-neutral-800 p-4 md:p-5 flex flex-col justify-between min-h-[180px]">
+            <div>
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
+                <span className="text-xs font-bold text-white">Flags</span>
+                <div className="flex items-center gap-6 text-[10px] tracking-wider font-semibold text-neutral-400 uppercase">
+                  <span>VISITORS</span>
+                  <span>TOTAL</span>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                {(data.flags || []).length === 0 ? (
+                  <div className="py-8 flex flex-col items-center justify-center text-center text-neutral-500 space-y-2">
+                    <div className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400">
+                      <ToggleLeft className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-medium">No flags</span>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-neutral-900">
+                    {(data.flags || []).slice(0, 5).map((fl, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 text-xs">
+                        <span className="text-neutral-200 font-mono">{fl.name}</span>
+                        <div className="flex items-center gap-8 font-mono text-xs">
+                          <span className="text-neutral-300 font-bold">{fl.visitors}</span>
+                          <span className="text-white font-bold">{fl.total}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Main Two-Column Analytics: Countries & Top Pages ─────────────────── */}
